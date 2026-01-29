@@ -9,19 +9,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-obfuscatedKey", dest="obfuscated_hex", required=True)
     parser.add_argument("-contentId", dest="content_id_hex", required=True)
-    parser.add_argument("-traceOutput", dest="traceOutput", required=False)
+    parser.add_argument("-traceOutput", dest="trace_output", required=False)
     args = parser.parse_args()
 
-    trace_file = open(args.traceOutput, "w") if args.traceOutput else None
+    trace_file = open(args.trace_output, "a", newline="\n") if args.trace_output else None
 
     derived_key: bytes | None = None
     playplay_context: PlayPlayCtx | None = None
 
     pe = pefile.PE(EXE_PATH)
 
-    emu = KeyEmu(
-        pe, trace_file=trace_file, enable_callstack_hook=trace_file is not None
-    )
+    emu = KeyEmu(pe)
     try:
         derived_key = emu.getDerivedKey(
             bytes.fromhex(args.obfuscated_hex), bytes.fromhex(args.content_id_hex)
@@ -29,7 +27,6 @@ if __name__ == "__main__":
         playplay_context = emu.playplayInitializeWithKey(derived_key, trace_file)
     except UcError as e:
         print(f"CRASH: {e} | EIP: 0x{emu.unicorn.reg_read(UC_X86_REG_EIP):08X}\n")
-        emu.dump_shadow_callstack()
     finally:
         if trace_file:
             trace_file.close()

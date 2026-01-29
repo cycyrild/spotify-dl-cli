@@ -38,30 +38,16 @@ ENABLE_INSTR_LOG = True
 
 
 class KeyEmu:
-    def __init__(
-        self,
-        pe: pefile.PE,
-        trace_file: TextIO | None = None,
-        enable_callstack_hook: bool = False,
-    ) -> None:
+    def __init__(self, pe: pefile.PE) -> None:
         self.pe = pe
         self.unicorn = Uc(UC_ARCH_X86, UC_MODE_32)
 
         self.disasm = Cs(CS_ARCH_X86, CS_MODE_32)
 
-        self.trace_file = trace_file
         self.image_base = pe.OPTIONAL_HEADER.ImageBase  # type: ignore
 
-        self.enable_callstack_hook = enable_callstack_hook
         self.shadow_callstack: Optional[CallTrace] = None
         self._callstack_hook_handle: Optional[int] = None
-
-        if enable_callstack_hook:
-            self.shadow_callstack = CallTrace(
-                disassembler=self.disasm,
-                trace_file=self.trace_file,
-                enable_instr_log=ENABLE_INSTR_LOG,
-            )
 
         self._initialized = False
         self._setup()
@@ -133,10 +119,6 @@ class KeyEmu:
 
         return shadow
 
-    def dump_shadow_callstack(self) -> None:
-        if self.shadow_callstack:
-            self.shadow_callstack.dump()
-
     def getDerivedKey(
         self,
         obfuscated_key: bytes,
@@ -187,12 +169,10 @@ class KeyEmu:
 
         self.unicorn.reg_write(UC_X86_REG_ECX, ctx_addr)
 
-        self._emu_with_calltrace(
+        shadow = self._emu_with_calltrace(
             ADDR_PLAYPLAY_INIT_WITH_KEY,
             trace_file,
         )
 
-        ctx_bytes = bytes(
-            self.unicorn.mem_read(ctx_addr, PlayPlayCtx.size())
-        )
+        ctx_bytes = bytes(self.unicorn.mem_read(ctx_addr, PlayPlayCtx.size()))
         return PlayPlayCtx.from_bytes(ctx_bytes)
