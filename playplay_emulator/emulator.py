@@ -4,8 +4,7 @@ from typing import Optional, TextIO
 from capstone import Cs, CS_ARCH_X86, CS_MODE_32
 from unicorn.unicorn import Uc
 from unicorn import UC_ARCH_X86, UC_HOOK_CODE, UC_MODE_32
-from unicorn.x86_const import UC_X86_REG_EBP, UC_X86_REG_ESP, UC_X86_REG_ECX
-
+from unicorn.x86_const import UC_X86_REG_EBP, UC_X86_REG_ESP, UC_X86_REG_EAX
 import patch_binary
 from playplay_emulator.playplay_ctx import PlayPlayCtx
 from call_trace import CallTrace
@@ -15,7 +14,9 @@ from . import key_derivation_vm
 EXE_PATH = "bin.exe"
 
 ADDR_DERIVE_KEY = 0x0082745A
-ADDR_PLAYPLAY_INIT_WITH_KEY = 0x006F9A92
+ADDR_INIT_WITH_KEY = 0x006FA93C
+ADDR_GEN_KEYSTREAM = 0x006F9AEC
+ADDR_SEEK_STATE_BLOCK = 0x006FAC49
 
 MAGIC_RET = 0xDEADBEEF
 
@@ -33,6 +34,11 @@ FUNCTIONS_TO_STUB = [
     0x00463D85,
     0x00ECC5C7,
 ]
+
+DERIVED_KEY_SIZE = 24
+KEYSTREAM_SIZE = 16
+OFUSCATED_KEY_SIZE = 16
+CONTENT_ID_SIZE = 16
 
 ENABLE_INSTR_LOG = True
 
@@ -119,14 +125,27 @@ class KeyEmu:
 
         return shadow
 
+    def _read_u32(self, addr: int) -> int:
+        return struct.unpack("<I", self.unicorn.mem_read(addr, 4))[0]
+
+    def _pack_u32(self, value: int) -> bytes:
+        return struct.pack("<I", value)
+
+    def _write_u32(self, addr: int, value: int) -> None:
+        self.unicorn.mem_write(addr, self._pack_u32(value))
+
+    def _write_stack_args(self, esp: int, *u32_values: int) -> None:
+        for i, v in enumerate(u32_values):
+            self._write_u32(esp + 4 * i, v)
+
     def getDerivedKey(
         self,
         obfuscated_key: bytes,
         content_id: bytes,
         trace_file: TextIO | None = None,
     ) -> bytes:
-        assert len(obfuscated_key) == 16
-        assert len(content_id) == 16
+        assert len(obfuscated_key) == OFUSCATED_KEY_SIZE
+        assert len(content_id) == CONTENT_ID_SIZE
 
         esp = self._init_stack()
 
@@ -137,42 +156,111 @@ class KeyEmu:
         self.unicorn.mem_write(obfuscated_key_addr, obfuscated_key)
         self.unicorn.mem_write(content_id_addr, content_id)
 
-        self.unicorn.mem_write(esp, struct.pack("<I", MAGIC_RET))
-        self.unicorn.mem_write(esp + 4, struct.pack("<I", obfuscated_key_addr))
-        self.unicorn.mem_write(esp + 8, struct.pack("<I", derived_key_addr))
-        self.unicorn.mem_write(esp + 12, struct.pack("<I", content_id_addr))
-
-        shadow = self._emu_with_calltrace(
-            ADDR_DERIVE_KEY,
-            trace_file,
+        self._write_stack_args(
+            esp,
+            MAGIC_RET,
+            obfuscated_key_addr,
+            derived_key_addr,
+            content_id_addr,
         )
 
-        return bytes(self.unicorn.mem_read(derived_key_addr, 24))
+        self._emu_with_calltrace(ADDR_DERIVE_KEY, trace_file)
+        return bytes(self.unicorn.mem_read(derived_key_addr, DERIVED_KEY_SIZE))
 
-    def playplayInitializeWithKey(
+    def initializeWithKey(
         self,
         derived_key: bytes,
         trace_file: TextIO | None = None,
-    ) -> PlayPlayCtx:
-        assert len(derived_key) == 24
+    ) -> tuple[bytes, int]:
+        assert len(derived_key) == DERIVED_KEY_SIZE
 
         esp = self._init_stack()
 
-        ctx_addr = HEAP_ADDR + 0x2000
-        derived_key_addr = HEAP_ADDR + 0x3000
+        state_addr = HEAP_ADDR + 0x4000  # 744 bytes
+        setup_value_addr = HEAP_ADDR + 0x4500  # 4 bytes
+        derived_key_addr = HEAP_ADDR + 0x4600  # 24 bytes
 
-        self.unicorn.mem_write(ctx_addr, b"\x00" * PlayPlayCtx.size())
+        self.unicorn.mem_write(state_addr, b"\x00" * PlayPlayCtx.field_size("state"))
+        self.unicorn.mem_write(
+            setup_value_addr, b"\x00" * PlayPlayCtx.field_size("setup_value")
+        )
         self.unicorn.mem_write(derived_key_addr, derived_key)
 
-        self.unicorn.mem_write(esp, struct.pack("<I", MAGIC_RET))
-        self.unicorn.mem_write(esp + 4, struct.pack("<I", derived_key_addr))
-
-        self.unicorn.reg_write(UC_X86_REG_ECX, ctx_addr)
-
-        shadow = self._emu_with_calltrace(
-            ADDR_PLAYPLAY_INIT_WITH_KEY,
-            trace_file,
+        self._write_stack_args(
+            esp,
+            MAGIC_RET,
+            state_addr,
+            derived_key_addr,
+            setup_value_addr,
         )
 
-        ctx_bytes = bytes(self.unicorn.mem_read(ctx_addr, PlayPlayCtx.size()))
-        return PlayPlayCtx.from_bytes(ctx_bytes)
+        self._emu_with_calltrace(ADDR_INIT_WITH_KEY, trace_file)
+
+        state = bytes(
+            self.unicorn.mem_read(state_addr, PlayPlayCtx.field_size("state"))
+        )
+        setup_value = self._read_u32(setup_value_addr)
+
+        return state, setup_value
+
+    def generateKeystream(
+        self,
+        state: bytes,
+        trace_file: TextIO | None = None,
+    ) -> tuple[bytes, bytes]:
+        assert len(state) == PlayPlayCtx.field_size("state")
+
+        esp = self._init_stack()
+
+        state_addr = HEAP_ADDR + 0x4000
+        keystream_addr = HEAP_ADDR + 0x5000
+
+        self.unicorn.mem_write(state_addr, state)
+        self.unicorn.mem_write(
+            keystream_addr, b"\x00" * PlayPlayCtx.field_size("keystream")
+        )
+
+        self._write_stack_args(
+            esp,
+            MAGIC_RET,
+            state_addr,
+            keystream_addr,
+        )
+
+        self._emu_with_calltrace(ADDR_GEN_KEYSTREAM, trace_file)
+
+        new_state = bytes(
+            self.unicorn.mem_read(state_addr, PlayPlayCtx.field_size("state"))
+        )
+        keystream = bytes(
+            self.unicorn.mem_read(keystream_addr, PlayPlayCtx.field_size("keystream"))
+        )
+
+        return new_state, keystream
+
+    def seek_state_to_block(
+        self,
+        state: bytes,
+        block_index: int,
+        trace_file: TextIO | None = None,
+    ) -> bytes:
+        assert len(state) == PlayPlayCtx.field_size("state")
+        assert struct.pack("<I", block_index)
+
+        esp = self._init_stack()
+
+        state_addr = HEAP_ADDR + 0x4000
+        self.unicorn.mem_write(state_addr, state)
+
+        self._write_stack_args(
+            esp,
+            MAGIC_RET,
+            state_addr,
+            block_index,
+        )
+
+        self._emu_with_calltrace(ADDR_SEEK_STATE_BLOCK, trace_file)
+
+        return bytes(
+            self.unicorn.mem_read(state_addr, PlayPlayCtx.field_size("state"))
+        )

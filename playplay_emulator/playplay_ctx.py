@@ -1,4 +1,6 @@
 import ctypes
+from typing import Any, Type
+
 
 class PlayPlayCtx(ctypes.Structure):
     _fields_ = [
@@ -29,11 +31,27 @@ class PlayPlayCtx(ctypes.Structure):
     @classmethod
     def size(cls) -> int:
         return ctypes.sizeof(cls)
-    
+
     def to_bytes(self) -> bytes:
         return ctypes.string_at(
             ctypes.addressof(self),
             ctypes.sizeof(self),
         )
+
+    @classmethod
+    def _field_ctype(cls, name: str) -> Type[Any]:
+        for field in cls._fields_:
+            if field[0] == name:
+                return field[1]
+        raise KeyError(name)
+
+    @classmethod
+    def field_type(cls, name: str) -> Type[Any]:
+        return cls._field_ctype(name)
+
+    @classmethod
+    def field_size(cls, name: str) -> int:
+        return ctypes.sizeof(cls._field_ctype(name))
+
 
 assert ctypes.sizeof(PlayPlayCtx) == 0x308

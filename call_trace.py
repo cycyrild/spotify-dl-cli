@@ -1,6 +1,7 @@
 from typing import Any, TextIO, List, Tuple
 from capstone import Cs
 
+
 class CallTrace:
     def __init__(
         self,
@@ -16,9 +17,8 @@ class CallTrace:
         code = uc.mem_read(address, size)
 
         opcode_hex = code.hex()
-        addr_hex   = f"{address:08x}"
+        addr_hex = f"{address:08x}"
 
         if self.enable_instr_log and self.trace_file:
             line = f"i:{addr_hex}:{size}:{opcode_hex}"
             self.trace_file.write(line + "\n")
-

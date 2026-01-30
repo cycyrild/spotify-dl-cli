@@ -12,19 +12,33 @@ if __name__ == "__main__":
     parser.add_argument("-traceOutput", dest="trace_output", required=False)
     args = parser.parse_args()
 
-    trace_file = open(args.trace_output, "a", newline="\n") if args.trace_output else None
+    trace_file = (
+        open(args.trace_output, "a", newline="\n") if args.trace_output else None
+    )
 
     derived_key: bytes | None = None
-    playplay_context: PlayPlayCtx | None = None
+    keystream: bytes | None = None
 
     pe = pefile.PE(EXE_PATH)
 
     emu = KeyEmu(pe)
     try:
         derived_key = emu.getDerivedKey(
-            bytes.fromhex(args.obfuscated_hex), bytes.fromhex(args.content_id_hex)
+            bytes.fromhex(args.obfuscated_hex),
+            bytes.fromhex(args.content_id_hex),
+            trace_file=None,
         )
-        playplay_context = emu.playplayInitializeWithKey(derived_key, trace_file)
+        state, setup_value = emu.initializeWithKey(
+            derived_key,
+            trace_file=None,
+        )
+
+        state = emu.seek_state_to_block(state, 0, trace_file=None)
+
+        state, keystream = emu.generateKeystream(
+            state,
+            trace_file=None,
+        )
     except UcError as e:
         print(f"CRASH: {e} | EIP: 0x{emu.unicorn.reg_read(UC_X86_REG_EIP):08X}\n")
     finally:
@@ -33,9 +47,5 @@ if __name__ == "__main__":
 
     if derived_key:
         print(f"Derived Key: {derived_key.hex()}")
-
-    if playplay_context:
-        with open("playplay_ctx.bin", "wb") as f:
-            f.write(playplay_context.to_bytes())
-
-    
+    if keystream is not None:
+        print(f"Keystream: {keystream.hex()}")
