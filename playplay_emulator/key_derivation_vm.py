@@ -1,11 +1,8 @@
 from __future__ import annotations
-import struct
-from typing import TYPE_CHECKING
 import pefile
 from unicorn.unicorn import Uc
 
-if TYPE_CHECKING:
-    from playplay_emulator.emulator import KeyEmu
+from playplay_emulator.helpers import pack_u32
 
 ADDR_G_PLAYPLAY_VM_WORKSPACE_POOL = 0x019FE388
 VM_WORKSPACE_POOL_SIZE = 68096  # 0x10A00
@@ -19,7 +16,7 @@ CONST_TABLE_VA_END = 0x010684A8 + VM_WORKSPACE_CONST_SIZE
 def init_playplay_vm_workspace(uc: Uc, pe: pefile.PE, vm_pool_ptr: int) -> None:
     uc.mem_write(
         ADDR_G_PLAYPLAY_VM_WORKSPACE_POOL,
-        struct.pack("<I", vm_pool_ptr),
+        pack_u32(vm_pool_ptr),
     )
     uc.mem_write(vm_pool_ptr, b"\x00" * VM_WORKSPACE_POOL_SIZE)
     rva_start = CONST_TABLE_VA_START - pe.OPTIONAL_HEADER.ImageBase  # type: ignore
