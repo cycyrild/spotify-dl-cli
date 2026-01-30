@@ -33,7 +33,7 @@ if __name__ == "__main__":
             trace_file=None,
         )
 
-        state = emu.seek_state_to_block(state, 0, trace_file=None)
+        state = emu.seekStateToBlock(state, 0, trace_file=None)
 
         state, keystream = emu.generateKeystream(
             state,

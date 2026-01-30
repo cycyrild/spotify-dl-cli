@@ -26,6 +26,15 @@ STACK_SIZE = 0x00100000
 HEAP_ADDR = 0x00200000
 HEAP_SIZE = 0x00200000
 
+HEAP_OFF_VM_WORKSPACE = 0x0000
+HEAP_OFF_OBFUSCATED_KEY = 0x0100
+HEAP_OFF_DERIVED_KEY = 0x0200
+HEAP_OFF_CONTENT_ID = 0x0300
+HEAP_OFF_STATE = 0x4000
+HEAP_OFF_SETUP_VALUE = 0x4500
+HEAP_OFF_DERIVED_KEY_IN = 0x4600
+HEAP_OFF_KEYSTREAM = 0x5000
+
 FUNCTIONS_TO_STUB = [
     0x004EC2C8,
     0x00EB7AE1,
@@ -36,7 +45,6 @@ FUNCTIONS_TO_STUB = [
 ]
 
 DERIVED_KEY_SIZE = 24
-KEYSTREAM_SIZE = 16
 OFUSCATED_KEY_SIZE = 16
 CONTENT_ID_SIZE = 16
 
@@ -58,6 +66,9 @@ class KeyEmu:
         self._initialized = False
         self._setup()
 
+    def _heap_ptr(self, offset: int) -> int:
+        return HEAP_ADDR + offset
+
     def _setup(self) -> None:
         if self._initialized:
             return
@@ -75,7 +86,7 @@ class KeyEmu:
                 self.shadow_callstack.hook,
             )
 
-        playplay_key_pool_ptr = HEAP_ADDR + 0x1000
+        playplay_key_pool_ptr = self._heap_ptr(HEAP_OFF_VM_WORKSPACE)
 
         key_derivation_vm.init_playplay_vm_workspace(
             self.unicorn, self.pe, playplay_key_pool_ptr
@@ -142,16 +153,16 @@ class KeyEmu:
         self,
         obfuscated_key: bytes,
         content_id: bytes,
-        trace_file: TextIO | None = None,
+        trace_file: TextIO | None,
     ) -> bytes:
         assert len(obfuscated_key) == OFUSCATED_KEY_SIZE
         assert len(content_id) == CONTENT_ID_SIZE
 
         esp = self._init_stack()
 
-        obfuscated_key_addr = HEAP_ADDR + 0x100
-        derived_key_addr = HEAP_ADDR + 0x200
-        content_id_addr = HEAP_ADDR + 0x300
+        obfuscated_key_addr = self._heap_ptr(HEAP_OFF_OBFUSCATED_KEY)
+        derived_key_addr = self._heap_ptr(HEAP_OFF_DERIVED_KEY)
+        content_id_addr = self._heap_ptr(HEAP_OFF_CONTENT_ID)
 
         self.unicorn.mem_write(obfuscated_key_addr, obfuscated_key)
         self.unicorn.mem_write(content_id_addr, content_id)
@@ -170,20 +181,16 @@ class KeyEmu:
     def initializeWithKey(
         self,
         derived_key: bytes,
-        trace_file: TextIO | None = None,
+        trace_file: TextIO | None,
     ) -> tuple[bytes, int]:
         assert len(derived_key) == DERIVED_KEY_SIZE
 
         esp = self._init_stack()
 
-        state_addr = HEAP_ADDR + 0x4000  # 744 bytes
-        setup_value_addr = HEAP_ADDR + 0x4500  # 4 bytes
-        derived_key_addr = HEAP_ADDR + 0x4600  # 24 bytes
+        state_addr = self._heap_ptr(HEAP_OFF_STATE)
+        setup_value_addr = self._heap_ptr(HEAP_OFF_SETUP_VALUE)
+        derived_key_addr = self._heap_ptr(HEAP_OFF_DERIVED_KEY_IN)
 
-        self.unicorn.mem_write(state_addr, b"\x00" * PlayPlayCtx.field_size("state"))
-        self.unicorn.mem_write(
-            setup_value_addr, b"\x00" * PlayPlayCtx.field_size("setup_value")
-        )
         self.unicorn.mem_write(derived_key_addr, derived_key)
 
         self._write_stack_args(
@@ -206,19 +213,16 @@ class KeyEmu:
     def generateKeystream(
         self,
         state: bytes,
-        trace_file: TextIO | None = None,
+        trace_file: TextIO | None,
     ) -> tuple[bytes, bytes]:
         assert len(state) == PlayPlayCtx.field_size("state")
 
         esp = self._init_stack()
 
-        state_addr = HEAP_ADDR + 0x4000
-        keystream_addr = HEAP_ADDR + 0x5000
+        state_addr = self._heap_ptr(HEAP_OFF_STATE)
+        keystream_addr = self._heap_ptr(HEAP_OFF_KEYSTREAM)
 
         self.unicorn.mem_write(state_addr, state)
-        self.unicorn.mem_write(
-            keystream_addr, b"\x00" * PlayPlayCtx.field_size("keystream")
-        )
 
         self._write_stack_args(
             esp,
@@ -238,18 +242,18 @@ class KeyEmu:
 
         return new_state, keystream
 
-    def seek_state_to_block(
+    def seekStateToBlock(
         self,
         state: bytes,
         block_index: int,
-        trace_file: TextIO | None = None,
+        trace_file: TextIO | None,
     ) -> bytes:
         assert len(state) == PlayPlayCtx.field_size("state")
         assert struct.pack("<I", block_index)
 
         esp = self._init_stack()
 
-        state_addr = HEAP_ADDR + 0x4000
+        state_addr = self._heap_ptr(HEAP_OFF_STATE)
         self.unicorn.mem_write(state_addr, state)
 
         self._write_stack_args(
