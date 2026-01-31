@@ -1,7 +1,6 @@
 from typing import Any, TextIO
 from capstone import CS_ARCH_X86, CS_MODE_32, Cs
 from unicorn import UC_MEM_READ, UC_MEM_WRITE, UC_MEM_FETCH
-from unicorn.x86_const import UC_X86_REG_EIP
 
 
 class InstructionTrace:
@@ -20,13 +19,6 @@ class InstructionTrace:
 
         opcode_hex = code.hex()
         self.trace_file.write(f"i:{addr_hex}:{size}:{opcode_hex}:{asm_str}\n")
-
-    def hook_mem_invalid(self, uc, access, address, size, value, user_data):
-        print(f"INVALID FETCH: addr=0x{address:08x} size={size}")
-        return False
-    
-    def hook_block(self, uc, address, size, user_data):
-        print(f"BB @ 0x{address:x}, size={size}")
 
     def hook_mem(
         self,

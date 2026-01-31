@@ -2,7 +2,7 @@ import argparse
 import pefile
 from unicorn.unicorn import UcError
 from playplay_emulator.emulator import EXE_PATH, KeyEmu
-from unicorn.x86_const import UC_X86_REG_EIP
+from playplay_emulator.helpers import *
 
 import trace
 
@@ -33,13 +33,11 @@ if __name__ == "__main__":
             derived_key,
             trace_file=None,
         )
-        state = emu.seekStateToBlock(state, 0, trace_file=trace_file)
+        state = emu.seekStateToBlock(state, 3, trace_file=trace_file)
         state, keystream = emu.generateKeystream(
             state,
             trace_file=None,
         )
-    except UcError as e:
-        print(f"CRASH: {e} | EIP: 0x{emu.unicorn.reg_read(UC_X86_REG_EIP):08X}\n")
     finally:
         if trace_file:
             trace_file.flush()

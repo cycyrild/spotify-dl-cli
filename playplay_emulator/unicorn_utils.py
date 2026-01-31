@@ -1,7 +1,7 @@
 import struct
 from unicorn.x86_const import UC_X86_REG_ESP, UC_X86_REG_EBP
 from unicorn.unicorn import Uc
-from playplay_emulator.helpers import pack_u32
+from playplay_emulator.helpers import *
 
 
 class UnicornStackUtils:
