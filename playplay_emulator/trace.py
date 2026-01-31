@@ -1,6 +1,18 @@
 from typing import Any, TextIO
 from capstone import CS_ARCH_X86, CS_MODE_32, Cs
 from unicorn import UC_MEM_READ, UC_MEM_WRITE, UC_MEM_FETCH
+from unicorn.x86_const import (
+    UC_X86_REG_EAX,
+    UC_X86_REG_EBX,
+    UC_X86_REG_ECX,
+    UC_X86_REG_EDX,
+    UC_X86_REG_ESI,
+    UC_X86_REG_EDI,
+    UC_X86_REG_EBP,
+    UC_X86_REG_ESP,
+    UC_X86_REG_EIP,
+    UC_X86_REG_EFLAGS,
+)
 
 
 class InstructionTrace:
@@ -19,6 +31,22 @@ class InstructionTrace:
 
         opcode_hex = code.hex()
         self.trace_file.write(f"i:{addr_hex}:{size}:{opcode_hex}:{asm_str}\n")
+
+        eax = uc.reg_read(UC_X86_REG_EAX)
+        ebx = uc.reg_read(UC_X86_REG_EBX)
+        ecx = uc.reg_read(UC_X86_REG_ECX)
+        edx = uc.reg_read(UC_X86_REG_EDX)
+        esi = uc.reg_read(UC_X86_REG_ESI)
+        edi = uc.reg_read(UC_X86_REG_EDI)
+        ebp = uc.reg_read(UC_X86_REG_EBP)
+        esp = uc.reg_read(UC_X86_REG_ESP)
+        eip = uc.reg_read(UC_X86_REG_EIP)
+        eflags = uc.reg_read(UC_X86_REG_EFLAGS)
+
+        self.trace_file.write(
+            f"r:{eax:08x}:{ebx:08x}:{ecx:08x}:{edx:08x}:"
+            f"{esi:08x}:{edi:08x}:{ebp:08x}:{esp:08x}:{eip:08x}:{eflags:08x}\n"
+        )
 
     def hook_mem(
         self,
