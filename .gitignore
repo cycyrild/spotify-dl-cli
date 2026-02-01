@@ -1,6 +1,5 @@
 /myenv
 __pycache__/
-/.vscode
 *.bin
 *.ogg
 /proto/*.py
