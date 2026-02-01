@@ -23,10 +23,11 @@ class PlayPlayCtx(ctypes.Structure):
         obj = cls()
         ctypes.memmove(
             ctypes.addressof(obj),
-            data,
+            bytes(data),  # <-- conversion essentielle
             ctypes.sizeof(cls),
         )
         return obj
+
 
     @classmethod
     def size(cls) -> int:

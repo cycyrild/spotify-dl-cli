@@ -1,5 +1,8 @@
+import ctypes
+from time import sleep
 import pefile
 from typing import Optional, TextIO
+import unicorn
 from unicorn.unicorn import Uc
 from unicorn import (
     UC_ARCH_X86,
@@ -9,54 +12,50 @@ from unicorn import (
     UC_HOOK_MEM_FETCH,
     UC_MODE_32,
 )
-import patch_binary
-from playplay_emulator.helpers import pack_u32
-from playplay_emulator.playplay_ctx import PlayPlayCtx
+from . import patch_binary
+from .helpers import pack_u32
+from .playplay_ctx import PlayPlayCtx
 from .trace import InstructionTrace
 from . import key_derivation_vm
 from .unicorn_utils import UnicornStackUtils
 from .constants import *
-
+import numpy as np
 
 class KeyEmu:
     def __init__(self, pe: pefile.PE) -> None:
         self.pe = pe
         self.image_base = pe.OPTIONAL_HEADER.ImageBase  # type: ignore
-
         self._image, self._image_size = self._prepare_pe_image()
+        patch_binary.install_stubs_in_image(
+            self._image, self.image_base, FUNCTIONS_TO_STUB
+        )
+        self._image_ro = self._image
 
     def _heap_ptr(self, offset: int) -> int:
-        return HEAP_ADDR + offset
+        return HEAP.ADDR + offset
 
-    def _prepare_pe_image(self) -> tuple[bytes, int]:
+    def _prepare_pe_image(self) -> tuple[bytearray, int]:
         self.pe.full_load()
         image = self.pe.get_memory_mapped_image(ImageBase=self.image_base)
         size = (len(image) + 0xFFF) & ~0xFFF
-        return bytes(image), size
+        buf = bytearray(image)
+        return buf, size
 
     def _create_uc(self) -> tuple[Uc, UnicornStackUtils]:
         uc = Uc(UC_ARCH_X86, UC_MODE_32)
 
-        uc.mem_map(STACK_ADDR, STACK_SIZE)
-        uc.mem_map(HEAP_ADDR, HEAP_SIZE)
+        uc.mem_map(STACK.ADDR, STACK.SIZE)
+        uc.mem_map(HEAP.ADDR, HEAP.SIZE)
 
         uc.mem_map(self.image_base, self._image_size)
-        uc.mem_write(self.image_base, self._image)
 
-        patch_binary.install_stubs(uc, FUNCTIONS_TO_STUB)
+        uc.mem_write(self.image_base, bytes(self._image_ro))
 
-        playplay_key_pool_ptr = self._heap_ptr(HEAP_OFF_VM_WORKSPACE)
-        key_derivation_vm.init_playplay_vm_workspace(uc, self.pe, playplay_key_pool_ptr)
-
-        stack_utils = UnicornStackUtils(uc, STACK_ADDR, STACK_SIZE)
+        stack_utils = UnicornStackUtils(uc, STACK.ADDR, STACK.SIZE)
         return uc, stack_utils
 
     def _emu_with_trace(
-        self,
-        uc: Uc,
-        start_addr: int,
-        trace_file: TextIO | None,
-        until: int = MAGIC_RET
+        self, uc: Uc, start_addr: int, trace_file: TextIO | None, until: int = MAGIC_RET
     ) -> Optional[InstructionTrace]:
         shadow: Optional[InstructionTrace] = None
         hook_code = None
@@ -86,15 +85,18 @@ class KeyEmu:
         content_id: bytes,
         trace_file: TextIO | None,
     ) -> bytes:
-        assert len(obfuscated_key) == OFUSCATED_KEY_SIZE
-        assert len(content_id) == CONTENT_ID_SIZE
+        assert len(obfuscated_key) == SIZES.OBFUSCATED_KEY
+        assert len(content_id) == SIZES.CONTENT_ID
 
         uc, stack_utils = self._create_uc()
         esp = stack_utils.init_stack()
 
-        obfuscated_key_addr = self._heap_ptr(HEAP_OFF_OBFUSCATED_KEY)
-        derived_key_addr = self._heap_ptr(HEAP_OFF_DERIVED_KEY)
-        content_id_addr = self._heap_ptr(HEAP_OFF_CONTENT_ID)
+        playplay_key_pool_ptr = self._heap_ptr(HEAP.OFF_VM_WORKSPACE)
+        key_derivation_vm.init_playplay_vm_workspace(uc, self.pe, playplay_key_pool_ptr)
+
+        obfuscated_key_addr = self._heap_ptr(HEAP.OFF_OBFUSCATED_KEY)
+        derived_key_addr = self._heap_ptr(HEAP.OFF_DERIVED_KEY)
+        content_id_addr = self._heap_ptr(HEAP.OFF_CONTENT_ID)
 
         uc.mem_write(obfuscated_key_addr, obfuscated_key)
         uc.mem_write(content_id_addr, content_id)
@@ -107,24 +109,25 @@ class KeyEmu:
             content_id_addr,
         )
 
-        self._emu_with_trace(uc, ADDR_DERIVE_KEY, trace_file)
-        return bytes(uc.mem_read(derived_key_addr, DERIVED_KEY_SIZE))
+        self._emu_with_trace(uc, ADDR.DERIVE_KEY, trace_file)
+        return bytes(uc.mem_read(derived_key_addr, SIZES.DERIVED_KEY))
 
-    def initializeWithKey(
+    def obfuscatedInitializeWithKey(
         self,
         derived_key: bytes,
         trace_file: TextIO | None,
-    ) -> tuple[bytes, int]:
-        assert len(derived_key) == DERIVED_KEY_SIZE
+    ) -> tuple[int, bytes]:
+        assert len(derived_key) == SIZES.DERIVED_KEY
 
         uc, stack_utils = self._create_uc()
         esp = stack_utils.init_stack()
 
-        state_addr = self._heap_ptr(HEAP_OFF_STATE)
-        setup_value_addr = self._heap_ptr(HEAP_OFF_SETUP_VALUE)
-        derived_key_addr = self._heap_ptr(HEAP_OFF_DERIVED_KEY_IN)
+        state_addr = self._heap_ptr(HEAP.OFF_STATE)
+        setup_value_addr = self._heap_ptr(HEAP.OFF_SETUP_VALUE)
+        derived_key_addr = self._heap_ptr(HEAP.OFF_DERIVED_KEY_IN)
 
         uc.mem_write(derived_key_addr, derived_key)
+        uc.mem_write(setup_value_addr, (0).to_bytes(4, byteorder="little"))
 
         stack_utils.write_stack_args(
             esp,
@@ -134,12 +137,11 @@ class KeyEmu:
             setup_value_addr,
         )
 
-        self._emu_with_trace(uc, ADDR_INIT_WITH_KEY, trace_file)
+        self._emu_with_trace(uc, ADDR.INIT_WITH_KEY, trace_file)
 
         state = bytes(uc.mem_read(state_addr, PlayPlayCtx.field_size("state")))
-        setup_value = stack_utils.read_u32(setup_value_addr)
 
-        return state, setup_value
+        return stack_utils.read_u32(setup_value_addr), state
 
     def generateKeystream(
         self,
@@ -151,8 +153,8 @@ class KeyEmu:
         uc, stack_utils = self._create_uc()
         esp = stack_utils.init_stack()
 
-        state_addr = self._heap_ptr(HEAP_OFF_STATE)
-        keystream_addr = self._heap_ptr(HEAP_OFF_KEYSTREAM)
+        state_addr = self._heap_ptr(HEAP.OFF_STATE)
+        keystream_addr = self._heap_ptr(HEAP.OFF_KEYSTREAM)
 
         uc.mem_write(state_addr, state)
 
@@ -163,14 +165,12 @@ class KeyEmu:
             keystream_addr,
         )
 
-        self._emu_with_trace(uc, ADDR_GEN_KEYSTREAM, trace_file)
+        self._emu_with_trace(uc, ADDR.GEN_KEYSTREAM, trace_file)
 
-        new_state = bytes(uc.mem_read(state_addr, PlayPlayCtx.field_size("state")))
-        keystream = bytes(
-            uc.mem_read(keystream_addr, PlayPlayCtx.field_size("keystream"))
-        )
+        keystream = uc.mem_read(keystream_addr, PlayPlayCtx.field_size("keystream"))
+        state = uc.mem_read(state_addr, PlayPlayCtx.field_size("state"))
 
-        return new_state, keystream
+        return bytes(keystream), bytes(state)
 
     def seekStateToBlock(
         self,
@@ -184,7 +184,7 @@ class KeyEmu:
         uc, stack_utils = self._create_uc()
         esp = stack_utils.init_stack()
 
-        state_addr = self._heap_ptr(HEAP_OFF_STATE)
+        state_addr = self._heap_ptr(HEAP.OFF_STATE)
         uc.mem_write(state_addr, state)
 
         stack_utils.write_stack_args(
@@ -194,6 +194,49 @@ class KeyEmu:
             block_index,
         )
 
-        self._emu_with_trace(uc, ADDR_SEEK_STATE_BLOCK, trace_file)
+        self._emu_with_trace(uc, ADDR.SEEK_STATE_BLOCK, trace_file)
 
         return bytes(uc.mem_read(state_addr, PlayPlayCtx.field_size("state")))
+
+    def decryptBufferInPlace(
+        self,
+        buf: bytearray,
+        initial_state: bytes,
+        initial_keystream: bytes,
+        trace_file: TextIO | None = None,
+    ) -> None:
+        assert len(initial_state) == PlayPlayCtx.field_size("state")
+        assert len(initial_keystream) == PlayPlayCtx.field_size("keystream")
+
+        uc, stack_utils = self._create_uc()
+
+        state_addr = self._heap_ptr(HEAP.OFF_STATE)
+        ks_addr = self._heap_ptr(HEAP.OFF_KEYSTREAM)
+
+        uc.mem_write(state_addr, initial_state)
+        uc.mem_write(ks_addr, initial_keystream)
+
+        buf_np = np.frombuffer(buf, dtype=np.uint8)
+        size = buf_np.size
+        offset = 0
+
+        while offset < size:
+            block_len = min(16, size - offset)
+
+            ks = uc.mem_read(ks_addr, 16)
+            buf_np[offset : offset + block_len] ^= np.frombuffer(
+                ks, dtype=np.uint8, count=block_len
+            )
+
+            offset += block_len
+            if offset >= size:
+                break
+
+            esp = stack_utils.init_stack()
+            stack_utils.write_stack_args(
+                esp,
+                MAGIC_RET,
+                state_addr,
+                ks_addr,
+            )
+            self._emu_with_trace(uc, ADDR.GEN_KEYSTREAM, trace_file)
