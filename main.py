@@ -1,118 +1,83 @@
+import argparse
 import logging
-from typing import Iterator
-
-from http_client import HttpClient
-from clients.metadata_client import ExtendedMetadataClient
-from ogg_parser import reconstruct_ogg_from_chunks
+from downloader import AUDIO_FORMATS, download_track, logger
 from clients.playplay_client import PlayPlayClient
+from http_client import HttpClient
 from playplay_emulator.playplay_keygen import PlayPlayKeygen
-from proto.track_pb2 import AudioFile, Track
+from clients.metadata_client import ExtendedMetadataClient
 from clients.storage_resolve_client import StorageResolverClient
 
 
-TARGET_AUDIO_FORMAT = AudioFile.Format.OGG_VORBIS_160
-CHUNK_SIZE = 0x10000
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Spotify OGG downloader")
 
-logger = logging.getLogger(__name__)
-
-
-def download_decrypt_and_reconstruct(
-    http: HttpClient,
-    url: str,
-    keygen: PlayPlayKeygen,
-) -> Iterator[bytes]:
-    with http.stream(url, headers={"Range": "bytes=0-"}) as resp:
-        resp.raise_for_status()
-
-        decrypted_chunks = (
-            buf
-            for buf in keygen.decrypt_stream(
-                bytearray(chunk)
-                for chunk in resp.iter_content(chunk_size=CHUNK_SIZE)
-                if chunk
-            )
-            if buf
-        )
-
-        yield from reconstruct_ogg_from_chunks(decrypted_chunks)
-
-
-def download_track_160kbps(
-    http_client: HttpClient,
-    track: Track,
-    resolver: StorageResolverClient,
-    playplay: PlayPlayClient,
-    keygen: PlayPlayKeygen,
-) -> None:
-    file_id = next(
-        (audio.file_id for audio in track.file if audio.format == TARGET_AUDIO_FORMAT),
-        None,
+    parser.add_argument(
+        "--token",
+        required=True,
+        help="Spotify bearer token",
     )
 
-    if not file_id:
-        logger.warning("OGG 160 kbps not available")
-        return
+    parser.add_argument(
+        "--tracks",
+        nargs="+",
+        required=True,
+        help="List of Spotify URIs (e.g., spotify:track:...)",
+    )
 
-    logger.info("Selected file_id: %s", file_id.hex())
+    parser.add_argument(
+        "--quality",
+        choices=AUDIO_FORMATS.keys(),
+        default="ogg-160",
+        help="Audio quality (default: ogg-160)",
+    )
 
-    obfuscated_key = playplay.get_obfuscated_key(file_id)
-    logger.debug("Obfuscated key: %s", obfuscated_key.hex())
+    parser.add_argument(
+        "--exe-path",
+        default="bin.exe",
+        help="Path to the PlayPlay executable",
+    )
 
-    keygen.configure(file_id=file_id, obfuscated_key=obfuscated_key)
-    logger.debug("Derived key: %s", keygen.derived_key.hex())
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Log level",
+    )
 
-    urls = resolver.resolve(file_id)
-    if not urls:
-        raise RuntimeError("No URLs returned from storage resolver")
-
-    output_path = f"{file_id.hex()}.ogg"
-    logger.info("Downloading from %s", urls[0])
-
-    with open(output_path, "wb") as output_file:
-        for ogg_page in download_decrypt_and_reconstruct(
-            http_client,
-            urls[0],
-            keygen,
-        ):
-            output_file.write(ogg_page)
+    return parser.parse_args()
 
 
 def main() -> None:
+    args = parse_args()
+
     logging.basicConfig(
-        level=logging.INFO,
+        level=getattr(logging, args.log_level),
         format="%(levelname)s: %(message)s",
     )
 
-    BEARER = "BQBBDVjhefX4kz9ql-6P3o_J5PTgA5HzKlFdaEAMh8zJdiOMxzP04RrCFHpr2KZVaA-a9oFxziXoYxlaDyFx1pqjY3s9ghRSff1tN1iBPhh9o1YBfQ4RRHIKk1lhnkvAcpAqjEsrlUNZOPlPXbOA4UoLespjfZ0SDWdz7jlDBtcItn1JzVFuf3Ulj4rAvh_dffvQvF2pCwTJi3YT3h9dEZEIcc08KZ5xPBDWcSwFIq_Zp94LosvmHT48Wsj9r756YZXIY_Qu4jbmvmiYzOPmp-6rmfHXzGMwlakuXO_ekgbGlAuRFqlqL-z7Xv8e7NXteq86Hh46-Q2HPTNJPsxWM4K9Xiw3CXOdSz89zJHANDxAwcAvgIq93zE1tuUSwHyKvgvAVh5MOOkWme2CGTkFpUY"
-    EXE_PATH = "bin.exe"
+    audio_format = AUDIO_FORMATS[args.quality]
 
-    TRACK_URIS = [
-        "spotify:track:7fLzbEOBOae9lUnOwr7Tse",
-        "spotify:track:2P4OICZRVAQcYAV2JReRfj",
-        "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn",
-    ]
-
-    client = HttpClient(BEARER)
-    keygen = PlayPlayKeygen(EXE_PATH)
+    client = HttpClient(args.token)
+    keygen = PlayPlayKeygen(args.exe_path)
 
     metadata = ExtendedMetadataClient(client)
     resolver = StorageResolverClient(client)
     playplay = PlayPlayClient(client, keygen._playplay_token)
 
-    tracks = metadata.fetch_tracks(TRACK_URIS)
+    tracks = metadata.fetch_tracks(args.tracks)
 
     for uri, track in tracks.items():
-        logger.info("Track URI: %s", uri)
-        logger.info("Name: %s", track.name)
+        logger.info("Track: %s", track.name)
         logger.info("Duration: %s", track.duration)
         logger.info("GID: %s", track.gid.hex())
 
-        download_track_160kbps(
+        download_track(
             client,
             track,
             resolver,
             playplay,
             keygen,
+            audio_format,
         )
 
 
