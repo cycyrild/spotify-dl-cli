@@ -1,2 +1,4 @@
 pefile
 unicorn
+requests
+protobuf

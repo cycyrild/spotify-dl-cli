@@ -11,12 +11,11 @@ from unicorn import (
 )
 from . import patch_binary
 from .helpers import pack_u32
-from .playplay_ctx import PlayPlayCtx
+from .playplay_ctx import PLAYPLAY_CTX
 from .trace import InstructionTrace
 from . import key_derivation_vm
 from .unicorn_utils import UnicornStackUtils
 from .constants import *
-import numpy as np
 
 
 class KeyEmu:
@@ -136,7 +135,7 @@ class KeyEmu:
 
         self._emu_with_trace(uc, ADDR.INIT_WITH_KEY, trace_file)
 
-        state = bytearray(uc.mem_read(state_addr, PlayPlayCtx.field_size("state")))
+        state = bytearray(uc.mem_read(state_addr, PLAYPLAY_CTX.STATE_SIZE))
 
         return stack_utils.read_u32(setup_value_addr), state
 
@@ -145,7 +144,7 @@ class KeyEmu:
         state: bytearray,
         trace_file: TextIO | None,
     ) -> bytes:
-        assert len(state) == PlayPlayCtx.field_size("state")
+        assert len(state) == PLAYPLAY_CTX.STATE_SIZE
 
         uc, stack_utils = self._create_uc()
         esp = stack_utils.init_stack()
@@ -166,12 +165,12 @@ class KeyEmu:
 
         keystream = uc.mem_read(
             keystream_addr,
-            PlayPlayCtx.field_size("keystream"),
+            PLAYPLAY_CTX.KEYSTREAM_SIZE,
         )
 
         new_state = uc.mem_read(
             state_addr,
-            PlayPlayCtx.field_size("state"),
+            PLAYPLAY_CTX.STATE_SIZE,
         )
         state[:] = new_state
 
@@ -183,7 +182,7 @@ class KeyEmu:
         block_index: int,
         trace_file: TextIO | None,
     ) -> None:
-        assert len(state) == PlayPlayCtx.field_size("state")
+        assert len(state) == PLAYPLAY_CTX.STATE_SIZE
         assert pack_u32(block_index)
 
         uc, stack_utils = self._create_uc()
@@ -204,7 +203,7 @@ class KeyEmu:
 
         new_state = uc.mem_read(
             state_addr,
-            PlayPlayCtx.field_size("state"),
+            PLAYPLAY_CTX.STATE_SIZE,
         )
         state[:] = new_state
 
@@ -214,7 +213,7 @@ class KeyEmu:
         state: bytearray,
         trace_file: TextIO | None = None,
     ) -> None:
-        assert len(state) == PlayPlayCtx.field_size("state")
+        assert len(state) == PLAYPLAY_CTX.STATE_SIZE
 
         uc, stack_utils = self._create_uc()
 
@@ -247,4 +246,4 @@ class KeyEmu:
 
             offset += block_len
 
-        state[:] = uc.mem_read(state_addr, len(state))
+        state[:] = uc.mem_read(state_addr, PLAYPLAY_CTX.STATE_SIZE)
