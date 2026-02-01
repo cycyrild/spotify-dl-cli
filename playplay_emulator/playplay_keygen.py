@@ -1,8 +1,7 @@
-import ctypes
+from typing import Callable, Iterable
 import pefile
 from playplay_emulator.constants import ADDR, SIZES
 from playplay_emulator.emulator import KeyEmu
-from playplay_emulator.playplay_ctx import PlayPlayCtx
 
 
 class PlayPlayKeygen:
@@ -15,53 +14,16 @@ class PlayPlayKeygen:
         self._content_id: bytes | None = None
         self._obfuscated_key: bytes | None = None
         self._derived_key: bytes | None = None
-        self._playplay_ctx: PlayPlayCtx | None = None
 
-    def configure(self, content_id: bytes, obfuscated_key: bytes) -> None:
-        self._content_id = content_id
+    def configure(self, file_id: bytes, obfuscated_key: bytes) -> None:
+        self._content_id = file_id[:16]
         self._obfuscated_key = obfuscated_key
-
-        self._playplay_ctx = PlayPlayCtx()
 
         self._derived_key = self._emu.getDerivedKey(
             obfuscated_key,
-            content_id,
+            self._content_id,
             trace_file=None,
         )
-
-        setup_value, state = self._emu.obfuscatedInitializeWithKey(
-            self._derived_key,
-            trace_file=None,
-        )
-
-        ctypes.memmove(
-            ctypes.addressof(self._playplay_ctx.state),
-            state,
-            len(state),
-        )
-
-        self._playplay_ctx.ready_flag = 1
-        self._playplay_ctx.setup_value = setup_value
-
-        keystream, updated_state = self._emu.generateKeystream(
-            bytes(self._playplay_ctx.state),  # état courant
-            trace_file=None,
-        )
-
-        ctypes.memmove(
-            ctypes.addressof(self._playplay_ctx.keystream),
-            keystream,
-            len(keystream),
-        )
-        
-        ctypes.memmove(
-            ctypes.addressof(self._playplay_ctx.state),
-            updated_state,
-            len(updated_state),
-        )
-        
-        self._playplay_ctx.initialized = 1
-        self._playplay_ctx.block_index = 0
 
     def _read_playplay_token(self) -> bytes:
         image_base = self._pe.OPTIONAL_HEADER.ImageBase  # type: ignore
@@ -73,41 +35,61 @@ class PlayPlayKeygen:
 
         return data
 
-    def generate_keystream(self) -> bytes:
-        if self._playplay_ctx is None:
+    def generate_keystream(self, state: bytearray):
+        if self._derived_key is None:
             raise RuntimeError("Keygen not configured")
 
-        keystream, state = self._emu.generateKeystream(
-            bytes(self._playplay_ctx.state), # type: ignore
+        keystream = self._emu.generateKeystream(
+            state=state,
             trace_file=None,
         )
-        ctypes.memmove(
-            ctypes.addressof(self._playplay_ctx.state),
-            state,
-            len(state),
-        )
+
         return keystream
 
-    def seek_state_to_block(self, block_index: int) -> bytes:
-        if self._playplay_ctx is None:
+    def seek_state_to_block(self, block_index: int, state: bytearray) -> None:
+        if self._derived_key is None:
             raise RuntimeError("Keygen not configured")
 
-        return self._emu.seekStateToBlock(
-            bytes(self._playplay_ctx.state), # type: ignore
+        self._emu.seekStateToBlock(
+            state,
             block_index,
             trace_file=None,
         )
-    
-    def decrypt_block(self, data: bytearray) -> None:
-        if self._playplay_ctx is None:
+
+    def decrypt_block(
+        self,
+        source: Callable[[], Iterable[bytearray]],
+        sink: Callable[[bytearray], int | None],
+    ) -> None:
+        if self._derived_key is None:
             raise RuntimeError("Keygen not configured")
 
-        self._emu.decryptBufferInPlace(
-            buf=data,
-            initial_state=bytes(self._playplay_ctx.state),  # type: ignore
-            initial_keystream=bytes(self._playplay_ctx.keystream),  # type: ignore
+        _, initial_state = self._emu.obfuscatedInitializeWithKey(
+            self._derived_key,
             trace_file=None,
         )
+
+        for buf in source():
+            self._emu.decryptBufferInPlace(
+                buf=buf,
+                state=initial_state,
+                trace_file=None,
+            )
+            sink(buf)
+
+    def decrypt_stream(self, source: Iterable[bytearray]) -> Iterable[bytearray]:
+        if self._derived_key is None:
+            raise RuntimeError("Keygen not configured")
+
+        _, initial_state = self._emu.obfuscatedInitializeWithKey(
+            self._derived_key, trace_file=None
+        )
+
+        for buf in source:
+            self._emu.decryptBufferInPlace(
+                buf=buf, state=initial_state, trace_file=None
+            )
+            yield buf
 
     @property
     def derived_key(self) -> bytes:
