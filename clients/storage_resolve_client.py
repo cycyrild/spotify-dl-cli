@@ -3,7 +3,7 @@ from constants import STORAGE_RESOLVE_V2_ENDPOINT
 from http_client import HttpClient
 from proto.storage_resolve_pb2 import StorageResolveResponse
 
-class StorageResolver:
+class StorageResolverClient:
     def __init__(self, http: HttpClient):
         self._http = http
 

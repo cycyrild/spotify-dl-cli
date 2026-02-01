@@ -2,12 +2,12 @@ import logging
 from typing import Iterator
 
 from http_client import HttpClient
-from metadata_helpers import ExtendedMetadataClient
+from clients.metadata_client import ExtendedMetadataClient
 from ogg_parser import reconstruct_ogg_from_chunks
-from playplay_client import PlayPlayClient
+from clients.playplay_client import PlayPlayClient
 from playplay_emulator.playplay_keygen import PlayPlayKeygen
 from proto.track_pb2 import AudioFile, Track
-from storage_resolve_helpers import StorageResolver
+from clients.storage_resolve_client import StorageResolverClient
 
 
 TARGET_AUDIO_FORMAT = AudioFile.Format.OGG_VORBIS_160
@@ -40,7 +40,7 @@ def download_decrypt_and_reconstruct(
 def download_track_160kbps(
     http_client: HttpClient,
     track: Track,
-    resolver: StorageResolver,
+    resolver: StorageResolverClient,
     playplay: PlayPlayClient,
     keygen: PlayPlayKeygen,
 ) -> None:
@@ -89,14 +89,14 @@ def main() -> None:
     TRACK_URIS = [
         "spotify:track:7fLzbEOBOae9lUnOwr7Tse",
         "spotify:track:2P4OICZRVAQcYAV2JReRfj",
-        "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn"
+        "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn",
     ]
 
     client = HttpClient(BEARER)
     keygen = PlayPlayKeygen(EXE_PATH)
 
     metadata = ExtendedMetadataClient(client)
-    resolver = StorageResolver(client)
+    resolver = StorageResolverClient(client)
     playplay = PlayPlayClient(client, keygen._playplay_token)
 
     tracks = metadata.fetch_tracks(TRACK_URIS)
