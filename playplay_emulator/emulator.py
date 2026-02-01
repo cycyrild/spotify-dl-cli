@@ -217,15 +217,14 @@ class KeyEmu:
         assert len(state) == PlayPlayCtx.field_size("state")
 
         uc, stack_utils = self._create_uc()
-        esp = stack_utils.init_stack()
 
         state_addr = self._heap_ptr(HEAP.OFF_STATE)
         ks_addr = self._heap_ptr(HEAP.OFF_KEYSTREAM)
 
         uc.mem_write(state_addr, bytes(state))
 
-        buf_np = np.frombuffer(buf, dtype=np.uint8)
-        size = buf_np.size
+        buf_view = memoryview(buf)
+        size = len(buf)
         offset = 0
 
         while offset < size:
@@ -239,14 +238,13 @@ class KeyEmu:
 
             self._emu_with_trace(uc, ADDR.GEN_KEYSTREAM, trace_file)
 
-            ks = uc.mem_read(ks_addr, SIZES.KEYSTREAM)
             block_len = min(SIZES.KEYSTREAM, size - offset)
+            ks = uc.mem_read(ks_addr, block_len)
 
-            buf_np[offset : offset + block_len] ^= np.frombuffer(
-                ks, dtype=np.uint8, count=block_len
-            )
+            block = buf_view[offset : offset + block_len]
+            for i in range(block_len):
+                block[i] ^= ks[i]
 
             offset += block_len
 
-        new_state = uc.mem_read(state_addr, len(state))
-        state[:] = new_state
+        state[:] = uc.mem_read(state_addr, len(state))

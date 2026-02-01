@@ -2,8 +2,6 @@ import uuid
 from collections.abc import Iterable
 from typing import Dict
 
-import requests
-
 from proto.track_pb2 import (
     BatchedEntityRequest,
     BatchedExtensionResponse,

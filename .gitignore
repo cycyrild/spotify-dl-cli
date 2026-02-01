@@ -3,5 +3,5 @@ __pycache__/
 /.vscode
 *.bin
 *.ogg
-py/proto/*.py
-py/proto/*.pyi
+/proto/*.py
+/proto/*.pyi

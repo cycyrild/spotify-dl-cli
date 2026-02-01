@@ -83,11 +83,13 @@ def main() -> None:
         format="%(levelname)s: %(message)s",
     )
 
-    BEARER = "BQBpgL-3I5vQLazTY93ewASHmInuPrMLpFs1ef0YPE91tvuy3fWb7yyZ-KqOX1eeh1HyIaUipHgM-vKcLtT0mISOH1fyJtRhsxF0LJpPiIvTrsYRKrMfuuGVfe29uBfoJrY7bAtFLJpG-tq6YJeo8KGKZZUdHcEpRt2tF1l3Jb3YFKH8cz2ObogDRgbokM2O4pY8R-SD7y1xEWmG4AQPrFNIjqaJ3jtDyWlGD-iGLKLeGM6e7xtjTl6ataSzFywGK_teur-9YMBroPKX0OT6CGDEVHYsEoKwUHuh4SKvX5Medb6QqTC_e9mDQtSuKQevvL8hJ70yQ333fqoBSQlUR8MsWNHfHM_Y6qjaD_siE1LLrJg5Z-VpASS_oICuCkFaSbUtf7bpFyHsjt0n4ClyLtI"
+    BEARER = "BQBBDVjhefX4kz9ql-6P3o_J5PTgA5HzKlFdaEAMh8zJdiOMxzP04RrCFHpr2KZVaA-a9oFxziXoYxlaDyFx1pqjY3s9ghRSff1tN1iBPhh9o1YBfQ4RRHIKk1lhnkvAcpAqjEsrlUNZOPlPXbOA4UoLespjfZ0SDWdz7jlDBtcItn1JzVFuf3Ulj4rAvh_dffvQvF2pCwTJi3YT3h9dEZEIcc08KZ5xPBDWcSwFIq_Zp94LosvmHT48Wsj9r756YZXIY_Qu4jbmvmiYzOPmp-6rmfHXzGMwlakuXO_ekgbGlAuRFqlqL-z7Xv8e7NXteq86Hh46-Q2HPTNJPsxWM4K9Xiw3CXOdSz89zJHANDxAwcAvgIq93zE1tuUSwHyKvgvAVh5MOOkWme2CGTkFpUY"
     EXE_PATH = "bin.exe"
 
     TRACK_URIS = [
         "spotify:track:7fLzbEOBOae9lUnOwr7Tse",
+        "spotify:track:2P4OICZRVAQcYAV2JReRfj",
+        "spotify:track:3CRDbSIZ4r5MsZ0YwxuEkn"
     ]
 
     client = HttpClient(BEARER)
