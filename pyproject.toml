@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spotify-dl-cli"
+version = "0.1.0"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.scripts]
+spotify-dl-cli = "main:main"
+
+[tool.setuptools]
+py-modules = [
+  "main",
+  "audio_formats",
+  "ogg_parser",
+  "parse_args",
+  "service_resolver",
+  "token_manager",
+  "resolve_exe_path",
+  "config"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+  "clt_extended_metadata",
+  "clt_playlist",
+  "clt_playplay",
+  "clt_storage_resolve",
+  "sp_auth",
+  "sp_downloader",
+  "playplay_emulator",
+  "http_client"
+]
+
+[tool.setuptools.package-data]
+playplay_emulator = ["sp_client.exe"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.black]
+skip-magic-trailing-comma = true
+extend-exclude = '''
+(
+    clt_.*/.*_pb2\.pyi?$
+)
+'''

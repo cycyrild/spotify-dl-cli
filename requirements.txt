@@ -1,0 +1,9 @@
+pefile
+unicorn
+requests
+protobuf
+capstone
+tqdm
+humanize
+mutagen
+platformdirs
