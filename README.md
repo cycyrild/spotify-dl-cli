@@ -1,19 +1,26 @@
 # spotify-dl-cli
 
-`spotify-dl-cli` is a proof-of-concept (POC) command-line project to download Spotify tracks by emulating Spotify DRM routines to decrypt protected streams.
+`spotify-dl-cli` is a proof-of-concept (POC) command-line project to download Spotify tracks by emulating Spotify DRM routines to decrypt protected streams. **NO PREMIUM ACCOUNT REQUIRED**
 
 > This project is the result of a reverse engineering study of Spotify’s authentication and content protection mechanisms, from authorization to final audio stream decryption.
 
+<sub>Discord: cyril13600</sub>
+
+![](image.png)
+
+### ⭐ Like the project ? Consider giving it a star.
 
 ## Quick Start
 
-1. Install with `pipx` from GitHub (requires Python 3.10+):
+1. Prerequisite: ensure `pipx` is installed and available in your `PATH` (see [Troubleshoot](#troubleshoot)).
+
+2. Install with `pipx` from GitHub (requires Python 3.10+):
 
 ```bash
 pipx install git+https://github.com/cycyrild/spotify-dl-cli.git
 ```
 
-2. Start with a first download command:
+3. Start with a first download command:
 
 ```bash
 spotify-dl-cli --tracks "spotify:track:YOUR_TRACK_ID"
@@ -21,8 +28,8 @@ spotify-dl-cli --tracks "spotify:track:YOUR_TRACK_ID"
 
 > Note: To get a Spotify URI for a track or playlist in the Spotify web or desktop app, right-click the item, go to **Share**, hold `Ctrl`, then click **Copy Spotify URI**.
 
-3. On first run, the CLI prints a Spotify authorization link. Open it, sign in, and approve access.
-4. After approval, the token is saved and the download continues to `music/`.
+4. On first run, the CLI prints a Spotify authorization link. Open it, sign in, and approve access.
+5. After approval, the token is saved and the download continues to `music/`.
 
 ```bash
 spotify-dl-cli --tracks "spotify:track:7MXVkk9YMctZqd1Srtv4MB"
@@ -35,15 +42,13 @@ INFO: Album    : Starboy
 INFO: Download completed: music/starboy_starboy_the_weeknd.ogg
 ```
 
-## Example of usage
-![](image.png)
-
 ## How it works (very, very quickly ...)
 
 This project focuses on the audio stream decryption layer, the most complex and least documented part of Spotify’s delivery pipeline.
 
 *Why emulate the official client rather than reimplement everything ?* \
-*Because the cryptographic and structural complexity makes emulation the most practical and time-efficient approach.*
+*Because the Spotify desktop binary is heavily obfuscated (e.g., VMProtect-style virtualization ...), clean reimplementation of the DRM logic would require extensive deobfuscation. \
+Emulation provides a practical way to execute the original routines without fully reversing those protections.*
 
 A CPU emulator loads and executes the original Windows PE binary of the Spotify desktop client, calling its native decryption routines directly rather than reimplementing them.
 
@@ -52,6 +57,25 @@ A CPU emulator loads and executes the original Windows PE binary of the Spotify 
 3. The encrypted audio stream is fetched in chunks and decrypted in place using the emulated keystream routine.
 4. Decrypted chunks are reassembled into valid Ogg pages and written to disk with proper metadata.
 
+## Troubleshoot
+
+If `pipx` is missing or not recognized, install it and add it to your `PATH`:
+
+### Windows
+
+```bash
+py -m pip install --user pipx
+py -m pipx ensurepath
+```
+
+### Linux / macOS
+
+```bash
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+```
+
+Restart your terminal after running `ensurepath`.
 
 ## Legal Notice
 
