@@ -1,3 +1,4 @@
 *.sh  text=auto eol=lf
-clt_*/**/*_pb2.py linguist-generated=true
-clt_*/**/*_pb2.pyi linguist-generated=true
+spotify_dl_cli/clt_*/**/*_pb2.py linguist-generated=true
+spotify_dl_cli/clt_*/**/*_pb2.pyi linguist-generated=true
+spotify_dl_cli/playplay_emulator/sp_client.exe binary

@@ -3,3 +3,4 @@ __pycache__/
 /music
 /.venv
 /*.egg-info
+/build
