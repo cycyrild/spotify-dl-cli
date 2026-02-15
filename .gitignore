@@ -1,0 +1,6 @@
+__pycache__/
+/spotify_tokens.json
+/music
+/.venv
+/*.egg-info
+/build

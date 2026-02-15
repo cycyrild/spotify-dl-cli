@@ -1,0 +1,1 @@
+CHUNK_SIZE = 0x10000

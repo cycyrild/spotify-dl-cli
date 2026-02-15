@@ -1,0 +1,16 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.typeCheckingMode": "standard",
+  "python.analysis.diagnosticMode": "workspace",
+  "python.analysis.autoImportCompletions": true,
+  "black-formatter.importStrategy": "fromEnvironment",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "python.analysis.exclude": [
+    "**/*.pyi",
+    "**/__pycache__",
+    ".venv/**",
+    ".git"
+  ]
+}
