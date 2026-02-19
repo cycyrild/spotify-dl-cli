@@ -1,8 +1,10 @@
 # spotify-dl-cli
 
-### It lasted 3 days...
-### The Spotify DRM version used by this repository (desktop client 1.2.31.1205) has been banned. 😥
-### Not working anymore ...
+### ~~It lasted 3 days...~~
+### ~~The Spotify DRM version used by this repository (desktop client 1.2.31.1205) has been banned. 😥~~
+### ~~Not working anymore ...~~
+
+### Just been fixed. The question is .... for how long ?
 
 #
 

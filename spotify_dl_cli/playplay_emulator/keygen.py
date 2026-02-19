@@ -47,12 +47,6 @@ class PlayPlayKeygen:
 
         return keystream
 
-    def seek_state_to_block(self, block_index: int, state: bytearray) -> None:
-        if self._derived_key is None:
-            raise RuntimeError("Keygen not configured")
-
-        self._emu.seekStateToBlock(state, block_index, trace_file=None)
-
     def decrypt_block(
         self,
         source: Callable[[], Iterable[bytearray]],
