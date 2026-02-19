@@ -130,25 +130,6 @@ class KeyEmu:
 
         return bytes(keystream)
 
-    def seekStateToBlock(
-        self, state: bytearray, block_index: int, trace_file: TextIO | None
-    ) -> None:
-        assert len(state) == PLAYPLAY_CTX.STATE_SIZE
-        assert pack_u32(block_index)
-
-        uc, stack_utils = self._create_uc()
-        esp = stack_utils.init_stack()
-
-        state_addr = stack_utils.next_heap(PLAYPLAY_CTX.STATE_SIZE)
-
-        uc.mem_write(state_addr, bytes(state))
-
-        stack_utils.write_stack_args(esp, MAGIC_RET, state_addr, block_index)
-
-        emu_with_trace(uc, ADDR.SEEK_STATE_BLOCK, trace_file)
-
-        state[:] = uc.mem_read(state_addr, PLAYPLAY_CTX.STATE_SIZE)
-
     """
     For performance reasons, this function reuses a single Unicorn emulation instance across multiple GEN_KEYSTREAM() invocations.
     """
