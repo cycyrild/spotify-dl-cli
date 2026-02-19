@@ -1,11 +1,5 @@
 # spotify-dl-cli
 
-### It lasted 3 days...
-### The Spotify DRM version used by this repository (desktop client 1.2.31.1205) has been banned. 😥
-### Not working anymore ...
-
-#
-
 `spotify-dl-cli` is a proof-of-concept (POC) command-line project to download Spotify tracks by emulating Spotify DRM routines to decrypt protected streams. **NO PREMIUM ACCOUNT REQUIRED**
 
 > This project is the result of a reverse engineering study of Spotify’s authentication and content protection mechanisms, from authorization to final audio stream decryption.
