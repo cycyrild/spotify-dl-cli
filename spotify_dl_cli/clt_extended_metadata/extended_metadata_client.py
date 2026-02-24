@@ -2,6 +2,7 @@ import uuid
 from urllib.parse import urljoin
 from collections.abc import Iterable
 from typing import Dict
+from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
 from .extendedmetadata_pb2 import (
     BatchedEntityRequest,
     BatchedExtensionResponse,
@@ -21,6 +22,8 @@ class ExtendedMetadataClient:
         self._base_url = sp_client_base
 
     def fetch_tracks(self, uris: Iterable[str]) -> Dict[str, Track]:
+        self._validate_track_uris(uris)
+
         payload = self._build_tracks_request(uris)
         url = self._build_url()
 
@@ -29,6 +32,14 @@ class ExtendedMetadataClient:
 
     def _build_url(self) -> str:
         return urljoin(self._base_url, self._ENDPOINT_PATH)
+
+    @staticmethod
+    def _validate_track_uris(uris: Iterable[str]) -> None:
+        if not isinstance(uris, Iterable):
+            raise TypeError("uris must be an iterable of Spotify track URIs")
+
+        for uri in uris:
+            parse_spotify_uri(uri, expected_type="track")
 
     @staticmethod
     def _build_tracks_request(uris: Iterable[str]) -> bytes:

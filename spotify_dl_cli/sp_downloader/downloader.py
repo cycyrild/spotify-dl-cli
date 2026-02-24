@@ -5,6 +5,9 @@ from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.clt_playplay.playplay_client import PlayPlayClient
 from spotify_dl_cli.playplay_emulator.keygen import PlayPlayKeygen
 from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile, Track
+from spotify_dl_cli.sp_downloader.generate_output_filename import (
+    generate_output_filename,
+)
 from spotify_dl_cli.sp_downloader.apply_metadata import apply_metadata
 from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
     StorageResolverClient,
@@ -13,11 +16,7 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
-from .helpers import (
-    download_decrypt_and_reconstruct,
-    generate_output_filename,
-    iter_audio_files,
-)
+from .helpers import download_decrypt_and_reconstruct, iter_audio_files
 
 
 def download_track(
@@ -28,6 +27,7 @@ def download_track(
     playplay: PlayPlayClient,
     keygen: PlayPlayKeygen,
     audio_format: AudioFile.Format,
+    track_filename_template: str,
 ) -> None:
 
     audio_files = list(iter_audio_files(track))
@@ -60,7 +60,7 @@ def download_track(
     head = http_client.head(url)
     total_size = int(head.headers["Content-Length"])
 
-    output_path = generate_output_filename(track)
+    output_path = f"{generate_output_filename(track, track_filename_template)}.ogg"
 
     logger.info("Estimated file size: %s", naturalsize(total_size, binary=True))
     logger.info("Downloading: %s", output_path)
