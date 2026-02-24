@@ -33,19 +33,3 @@ def iter_audio_files(track):
     for alt in track.alternative:
         for f in alt.file:
             yield f
-
-
-def slugify(value: str) -> str:
-    value = value.lower()
-    value = re.sub(r"[^\w]+", "_", value)
-    return value.strip("_")
-
-
-def generate_output_filename(track: Track) -> str:
-
-    track_name = slugify(track.name)
-    album_name = slugify(track.album.name) if track.album else "unknown_album"
-    artist = track.artist[0].name if track.artist else "unknown_artist"
-    artist_name = slugify(artist)
-
-    return f"{track_name}_{album_name}_{artist_name}.ogg"

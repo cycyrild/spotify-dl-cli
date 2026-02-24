@@ -3,11 +3,11 @@ from humanize import precisedelta
 from datetime import timedelta
 from pathlib import Path
 from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
-from .resolve_exe_path import bundled_exe_path
-from .config import default_tokens_path
+from spotify_dl_cli.resolve_exe_path import bundled_exe_path
+from spotify_dl_cli.config import default_tokens_path
 from spotify_dl_cli.sp_auth.constants import CLIENT_ID
 from spotify_dl_cli.sp_downloader.downloader import download_track
-from .parse_args import parse_args
+from spotify_dl_cli.parse_args import parse_args
 from spotify_dl_cli.clt_playplay.playplay_client import PlayPlayClient
 from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.playplay_emulator.keygen import PlayPlayKeygen
@@ -17,10 +17,11 @@ from spotify_dl_cli.clt_extended_metadata.extended_metadata_client import (
 from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
     StorageResolverClient,
 )
-from .service_resolver import resolve_spotify_endpoints
+from spotify_dl_cli.service_resolver import resolve_spotify_endpoints
 from spotify_dl_cli.sp_auth.pkce import SpotifyAuthPKCE
-from .token_manager import SpotifyTokenManager
-from .audio_formats import AUDIO_FORMATS
+from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
+from spotify_dl_cli.token_manager import SpotifyTokenManager
+from spotify_dl_cli.audio_formats import AUDIO_FORMATS
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +33,7 @@ def main() -> None:
         level=getattr(logging, args.log_level), format="%(levelname)s: %(message)s"
     )
 
-    if not args.tracks and not args.playlists:
-        logger.error("You must provide at least --tracks or --playlists")
-        raise SystemExit(2)
-
-    base_dir = Path(args.output)
+    base_dir = Path(args.output_dir)
 
     if not base_dir.exists():
         logger.debug("Output directory does not exist. Creating: %s", base_dir)
@@ -83,15 +80,24 @@ def main() -> None:
 
     all_track_uris: set[str] = set()
 
-    if args.tracks:
-        all_track_uris.update(args.tracks)
+    for uri in args.uris:
+        try:
+            resource_type, _ = parse_spotify_uri(uri)
+        except (TypeError, ValueError) as e:
+            logger.error("Invalid URI: %s (%s)", uri, e)
+            continue
 
-    if args.playlists:
-        for playlist_uri in args.playlists:
-            logger.info("Fetching playlist: %s", playlist_uri)
-            uris = playlist_client.fetch_all_track_uris(playlist_uri)
+        if resource_type == "track":
+            all_track_uris.add(uri)
+
+        elif resource_type == "playlist":
+            logger.info("Fetching playlist: %s", uri)
+            uris = playlist_client.fetch_all_track_uris(uri)
             logger.info("Found %d tracks", len(uris))
             all_track_uris.update(uris)
+
+        else:
+            logger.warning("Unsupported Spotify resource type: %s", resource_type)
 
     if not all_track_uris:
         logger.error("No tracks resolved")
@@ -108,7 +114,14 @@ def main() -> None:
         )
 
         download_track(
-            client, base_dir, track, resolver, playplay, keygen, audio_format
+            client,
+            base_dir,
+            track,
+            resolver,
+            playplay,
+            keygen,
+            audio_format,
+            args.filename_template,
         )
 
 
