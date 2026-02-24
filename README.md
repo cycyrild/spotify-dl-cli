@@ -23,7 +23,7 @@ pipx install git+https://github.com/cycyrild/spotify-dl-cli.git
 3. Start with a first download command:
 
 ```bash
-spotify-dl-cli --tracks "spotify:track:YOUR_TRACK_ID"
+spotify-dl-cli "spotify:track:YOUR_TRACK_ID"
 ```
 
 > Note: To get a Spotify URI for a track or playlist in the Spotify web or desktop app, right-click the item, go to **Share**, hold `Ctrl`, then click **Copy Spotify URI**.
@@ -32,7 +32,7 @@ spotify-dl-cli --tracks "spotify:track:YOUR_TRACK_ID"
 5. After approval, the token is saved and the download continues to `music/`.
 
 ```bash
-spotify-dl-cli --tracks "spotify:track:7MXVkk9YMctZqd1Srtv4MB"
+spotify-dl-cli "spotify:track:7MXVkk9YMctZqd1Srtv4MB"
 WARNING: Open the following URL to authorize Spotify access:
 WARNING: https://accounts.spotify.com/authorize?...
 INFO: Obtained new access token, expires in 3600 seconds
