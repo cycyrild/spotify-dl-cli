@@ -19,6 +19,27 @@ logger = logging.getLogger(__name__)
 from .helpers import download_decrypt_and_reconstruct, iter_audio_files
 
 
+def _download_from_url(
+    http_client: HttpClient, url: str, output_path: Path, keygen: PlayPlayKeygen
+) -> None:
+    head = http_client.head(url)
+    total_size = int(head.headers["Content-Length"])
+
+    logger.info("Estimated file size: %s", naturalsize(total_size, binary=True))
+    logger.info("Downloading: %s", output_path)
+
+    with (
+        open(output_path, "wb") as f,
+        tqdm(
+            total=total_size, unit="B", unit_scale=True, unit_divisor=1024, leave=False
+        ) as pbar,
+    ):
+        for ogg_page in download_decrypt_and_reconstruct(http_client, url, keygen):
+            size = len(ogg_page)
+            f.write(ogg_page)
+            pbar.update(size)
+
+
 def download_track(
     http_client: HttpClient,
     output_dir: Path,
@@ -55,28 +76,35 @@ def download_track(
     if not urls:
         raise RuntimeError("No URL returned by the resolver")
 
-    url = urls[0]
-
-    head = http_client.head(url)
-    total_size = int(head.headers["Content-Length"])
-
     output_path = f"{generate_output_filename(track, track_filename_template)}.ogg"
-
-    logger.info("Estimated file size: %s", naturalsize(total_size, binary=True))
-    logger.info("Downloading: %s", output_path)
-
     output_path = output_dir / output_path
 
-    with (
-        open(output_path, "wb") as f,
-        tqdm(
-            total=total_size, unit="B", unit_scale=True, unit_divisor=1024, leave=False
-        ) as pbar,
-    ):
-        for ogg_page in download_decrypt_and_reconstruct(http_client, url, keygen):
-            size = len(ogg_page)
-            f.write(ogg_page)
-            pbar.update(size)
+    last_error = None
+    downloaded = False
+    for idx, url in enumerate(urls, start=1):
+        try:
+            _download_from_url(http_client, url, output_path, keygen)
+
+        except Exception as exc:
+            last_error = exc
+
+            if output_path.exists():
+                output_path.unlink()
+
+            logger.warning(
+                "Download failed for URL %s/%s, trying next if available: %s (%s)",
+                idx,
+                len(urls),
+                url,
+                exc,
+            )
+            continue
+
+        downloaded = True
+        break
+
+    if not downloaded:
+        raise RuntimeError("All download URLs failed") from last_error
 
     logger.debug("Applying metadata tags ...")
     apply_metadata(output_path, track, http_client)
