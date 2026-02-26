@@ -12,7 +12,7 @@ from spotify_dl_cli.sp_auth.tokens import SpotifyTokens
 logger = logging.getLogger(__name__)
 
 
-class SpotifyTokenManager:
+class Spotif
     _TOKEN_URL = "https://accounts.spotify.com/api/token"
 
     def __init__(
