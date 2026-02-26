@@ -21,6 +21,9 @@ include = ["spotify_dl_cli", "spotify_dl_cli.*"]
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
+[project.optional-dependencies]
+dev = ["black"]
+
 [tool.black]
 skip-magic-trailing-comma = true
 extend-exclude = '''
