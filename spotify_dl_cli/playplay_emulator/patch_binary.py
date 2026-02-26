@@ -50,11 +50,11 @@ PatchFn = Callable[[bytearray, int, int], None]
 
 PATCHES: tuple[tuple[int, PatchFn], ...] = (
     (0x00463D65, patch_ret),  # __security_check_cookie
-    (0x01022E27, patch_ret),  # thunk jmp -> ret
-    (0x0100E345, patch_ret_zero),  # __Mtx_unlock
-    (0x0100F8F6, patch_ret_zero),  # __Cnd_signal
-    (0x0100F9DD, patch_ret_zero),  # __Cnd_wait
-    (0x004EA215, patch_unique_lock_ctor),  # unique_lock ctor
+    (0x0101F0F7, patch_ret),  # thunk jmp -> ret
+    (0x0100A615, patch_ret_zero),  # __Mtx_unlock
+    (0x0100BBC6, patch_ret_zero),  # __Cnd_signal
+    (0x0100BCAD, patch_ret_zero),  # __Cnd_wait
+    (0x004EA2A6, patch_unique_lock_ctor),  # unique_lock ctor
 )
 
 
