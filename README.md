@@ -1,5 +1,5 @@
 # spotify-dl-cli
-
+## ⚠️ This version is (once again) banned by Spotify. I'm working on fixing this again (when I have the time)... ⚠️
 `spotify-dl-cli` is a proof-of-concept (POC) command-line project to download Spotify tracks by emulating Spotify DRM routines to decrypt protected streams. **NO PREMIUM ACCOUNT REQUIRED**
 
 > This project is the result of a reverse engineering study of Spotify’s authentication and content protection mechanisms, from authorization to final audio stream decryption.
