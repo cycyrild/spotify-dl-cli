@@ -65,9 +65,7 @@ class KeyEmu:
         uc, stack_utils = self._create_uc()
         esp = stack_utils.init_stack()
 
-        playplay_key_pool_ptr = stack_utils.next_heap(
-            key_derivation_vm.VM_WORKSPACE_POOL_SIZE
-        )
+        playplay_key_pool_ptr = stack_utils.next_heap(PLAYPLAY_VM.WORKSPACE_POOL_SIZE)
 
         key_derivation_vm.init_playplay_vm_workspace(uc, self.pe, playplay_key_pool_ptr)
 

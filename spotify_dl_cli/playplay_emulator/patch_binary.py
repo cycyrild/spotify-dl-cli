@@ -1,5 +1,7 @@
 from typing import Callable
 
+from .constants import STUB_ADDRS
+
 STUB_RET = bytes([0xC3])
 
 
@@ -49,12 +51,12 @@ def patch_unique_lock_ctor(image: bytearray, image_base: int, va: int) -> None:
 PatchFn = Callable[[bytearray, int, int], None]
 
 PATCHES: tuple[tuple[int, PatchFn], ...] = (
-    (0x00463D65, patch_ret),  # __security_check_cookie
-    (0x0101F0F7, patch_ret),  # thunk jmp -> ret
-    (0x0100A615, patch_ret_zero),  # __Mtx_unlock
-    (0x0100BBC6, patch_ret_zero),  # __Cnd_signal
-    (0x0100BCAD, patch_ret_zero),  # __Cnd_wait
-    (0x004EA2A6, patch_unique_lock_ctor),  # unique_lock ctor
+    (STUB_ADDRS.SECURITY_CHECK_COOKIE, patch_ret),  # __security_check_cookie
+    (STUB_ADDRS.THUNK_JMP_RET, patch_ret),  # thunk jmp -> ret
+    (STUB_ADDRS.MTX_UNLOCK, patch_ret_zero),  # __Mtx_unlock
+    (STUB_ADDRS.CND_SIGNAL, patch_ret_zero),  # __Cnd_signal
+    (STUB_ADDRS.CND_WAIT, patch_ret_zero),  # __Cnd_wait
+    (STUB_ADDRS.UNIQUE_LOCK_CTOR, patch_unique_lock_ctor),  # unique_lock ctor
 )
 
 
