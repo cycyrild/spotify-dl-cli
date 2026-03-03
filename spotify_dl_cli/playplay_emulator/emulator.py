@@ -35,7 +35,6 @@ class KeyEmu:
         return HEAP.ADDR + offset
 
     def _prepare_pe_image(self) -> tuple[bytearray, int]:
-        self.pe.full_load()
         image = self.pe.get_memory_mapped_image(ImageBase=self.image_base)
         size = (len(image) + 0xFFF) & ~0xFFF
         buf = bytearray(image)
