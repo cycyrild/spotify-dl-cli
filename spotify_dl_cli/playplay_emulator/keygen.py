@@ -11,8 +11,8 @@ PlayPlay decryption by relying on emulation of the original PE binary.
 
 
 class PlayPlayKeygen:
-    def __init__(self, pe_path: Path):
-        self._pe = pefile.PE(pe_path)
+    def __init__(self, pe_bytes: bytes):
+        self._pe = pefile.PE(data=pe_bytes, fast_load=True)
         self._emu = KeyEmu(self._pe)
 
         self._playplay_token = self._read_playplay_token()
