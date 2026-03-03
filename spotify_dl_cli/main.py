@@ -61,7 +61,7 @@ def main() -> None:
     exe_path = bundled_exe_path()
     logger.debug("Using sp_client executable: %s", exe_path)
 
-    keygen = PlayPlayKeygen(exe_path)
+    keygen = PlayPlayKeygen(exe_path.read_bytes())
     sp_endpoints = resolve_spotify_endpoints()
 
     if not sp_endpoints.spclient:
