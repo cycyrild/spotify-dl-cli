@@ -51,7 +51,6 @@ def patch_unique_lock_ctor(image: bytearray, image_base: int, va: int) -> None:
 PatchFn = Callable[[bytearray, int, int], None]
 
 PATCHES: tuple[tuple[int, PatchFn], ...] = (
-    (STUB_ADDRS.SECURITY_CHECK_COOKIE, patch_ret),  # __security_check_cookie
     (STUB_ADDRS.THUNK_JMP_RET, patch_ret),  # thunk jmp -> ret
     (STUB_ADDRS.MTX_UNLOCK, patch_ret_zero),  # __Mtx_unlock
     (STUB_ADDRS.CND_SIGNAL, patch_ret_zero),  # __Cnd_signal

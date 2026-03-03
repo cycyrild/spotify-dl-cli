@@ -1,4 +1,4 @@
-SPOTIFY_APP_VERSION = "1.2.34.783".replace(".", "")
+SPOTIFY_APP_VERSION = "1.2.35.663".replace(".", "")
 USER_AGENT = (
     f"Spotify/{SPOTIFY_APP_VERSION} Win32/Windows 10 (10.0.19044; x86[native:x64])"
 )
