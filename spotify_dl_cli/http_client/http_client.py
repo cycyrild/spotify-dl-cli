@@ -1,9 +1,8 @@
 import requests
-from .constants import *
+from spotify_dl_cli.http_client.constants import BASE_HEADERS
 
 
 class HttpClient:
-
     def __init__(self, bearer: str | None = None):
         self._session = requests.Session()
         self._session.verify = True
