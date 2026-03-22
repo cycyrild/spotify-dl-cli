@@ -42,7 +42,6 @@ class SIZES:
 
 
 class STUB_ADDRS:
-
     # 55 8B EC E8 ?? ?? ?? ?? FF 75 0C 8B C8 FF 75 08 8B 10 FF 52 04 5D C3
     THUNK_JMP_RET = 0x010A4E67
 

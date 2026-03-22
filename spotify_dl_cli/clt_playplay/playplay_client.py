@@ -31,7 +31,7 @@ class PlayPlayClient:
 
     def _build_license_request(self) -> bytes:
         request = PlayPlayLicenseRequest()
-        request.version = 3
+        request.version = 5
         request.token = self._token
         request.interactivity = Interactivity.INTERACTIVE
         request.content_type = ContentType.AUDIO_TRACK

@@ -3,7 +3,7 @@ from pathlib import Path
 from humanize import naturalsize
 from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.clt_playplay.playplay_client import PlayPlayClient
-from spotify_dl_cli.playplay_emulator.keygen import PlayPlayKeygen
+from spotify_dl_cli.playplay_emulator5.keygen import PlayPlayKeygen
 from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile, Track
 from spotify_dl_cli.sp_downloader.generate_output_filename import (
     generate_output_filename,
@@ -13,10 +13,12 @@ from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
     StorageResolverClient,
 )
 from tqdm import tqdm
+from spotify_dl_cli.sp_downloader.helpers import (
+    download_decrypt_and_reconstruct,
+    iter_audio_files,
+)
 
 logger = logging.getLogger(__name__)
-
-from .helpers import download_decrypt_and_reconstruct, iter_audio_files
 
 
 def _download_from_url(
@@ -69,7 +71,7 @@ def download_track(
     logger.debug("Obfuscated key: %s", obfuscated_key.hex())
 
     keygen.configure(file_id=file.file_id, obfuscated_key=obfuscated_key)
-    logger.debug("Keygen configured with derived key: %s", keygen.derived_key.hex())
+    # logger.debug("Keygen configured with derived key: %s", keygen.derived_key.hex())
 
     urls = resolver.resolve(file.file_id)
 

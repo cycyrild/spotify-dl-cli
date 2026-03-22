@@ -16,18 +16,26 @@ where = ["."]
 include = ["spotify_dl_cli", "spotify_dl_cli.*"]
 
 [tool.setuptools.package-data]
-"spotify_dl_cli.playplay_emulator" = ["sp_client.exe"]
+"spotify_dl_cli.playplay_emulator5" = [
+    "sp_client.exe",
+    "generated/*"
+]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
 [project.optional-dependencies]
-dev = ["black"]
+dev = ["ruff"]
 
-[tool.black]
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+exclude = [
+    "spotify_dl_cli/clt_*/**/*_pb2.py",
+    "spotify_dl_cli/clt_*/**/*_pb2.pyi",
+    "**/generated/**"
+]
+
+[tool.ruff.format]
 skip-magic-trailing-comma = true
-extend-exclude = '''
-(
-    spotify_dl_cli/clt_.*/.*_pb2\.pyi?$
-)
-'''

@@ -7,3 +7,4 @@ tqdm
 humanize
 mutagen
 platformdirs
+pydantic
