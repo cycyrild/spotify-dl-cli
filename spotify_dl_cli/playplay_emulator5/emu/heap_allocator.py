@@ -7,11 +7,11 @@ class HeapAllocator:
     DEFAULT_ALIGNMENT = 0x10
 
     def __init__(self, mu: Uc, base_addr: int, size: int):
-        self.mu = mu
-        self.base = base_addr
-        self.size = size
-        self.offset = 0
-        self.chunks: list[HeapChunk] = []
+        self._mu = mu
+        self._base = base_addr
+        self._size = size
+        self._offset = 0
+        self._chunks: list[HeapChunk] = []
 
     @classmethod
     def create(cls, mu: Uc, base_addr: int, size: int):
@@ -19,18 +19,22 @@ class HeapAllocator:
         return cls(mu, base_addr, size)
 
     def alloc(self, size: int) -> HeapChunk:
-        aligned_offset = align(self.offset, self.DEFAULT_ALIGNMENT)
+        aligned_offset = align(self._offset, self.DEFAULT_ALIGNMENT)
 
-        if aligned_offset + size > self.size:
+        if aligned_offset + size > self._size:
             raise MemoryError("HeapAllocator: out of memory")
 
-        addr = self.base + aligned_offset
-        self.offset = aligned_offset + size
+        addr = self._base + aligned_offset
+        self._offset = aligned_offset + size
 
-        chunk = HeapChunk(self.mu, addr, size)
-        self.chunks.append(chunk)
+        chunk = HeapChunk(self._mu, addr, size)
+        self._chunks.append(chunk)
         return chunk
 
     def reset(self):
-        self.offset = 0
-        self.chunks.clear()
+        self._offset = 0
+        self._chunks.clear()
+
+    @property
+    def size(self) -> int:
+        return self._size

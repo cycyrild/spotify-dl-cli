@@ -3,7 +3,7 @@ from humanize import precisedelta
 from datetime import timedelta
 from pathlib import Path
 from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
-from spotify_dl_cli.resolve_exe_path import bundled_exe_path
+from spotify_dl_cli.resolve_exe_path import bundled_dll_path
 from spotify_dl_cli.config import default_tokens_path
 from spotify_dl_cli.sp_auth.constants import CLIENT_ID
 from spotify_dl_cli.sp_downloader.downloader import download_track
@@ -58,8 +58,8 @@ def main() -> None:
 
     audio_format = AUDIO_FORMATS[args.quality]
 
-    exe_path = bundled_exe_path()
-    logger.debug("Using sp_client executable: %s", exe_path)
+    exe_path = bundled_dll_path()
+    logger.debug("Using sp_client dll: %s", exe_path)
 
     keygen = PlayPlayKeygen(exe_path)
     sp_endpoints = resolve_spotify_endpoints()

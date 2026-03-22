@@ -10,6 +10,7 @@ from spotify_dl_cli.playplay_emulator5.consts import (
     PATHS,
     PLAYPLAY_TOKEN,
     RT_FUNCTIONS,
+    RT_DATA,
 )
 from spotify_dl_cli.playplay_emulator5.emu import runtime
 from spotify_dl_cli.playplay_emulator5.emu.addressing import rebase
@@ -17,64 +18,75 @@ from spotify_dl_cli.playplay_emulator5.emu.heap_allocator import HeapAllocator
 from spotify_dl_cli.playplay_emulator5.seh import seh_hook
 from spotify_dl_cli.playplay_emulator5.emu.map_pe import map_pe
 from pathlib import Path
+import struct
 
 logger = logging.getLogger(__name__)
 
 
 class KeyEmu:
     def __init__(self, sp_client_path: Path) -> None:
-        self.mu = Uc(UC_ARCH_X86, UC_MODE_64)
+        self._mu = Uc(UC_ARCH_X86, UC_MODE_64)
 
-        self.pe = PE(sp_client_path, fast_load=True)
-        self.image_base, self.image_size = map_pe(self.mu, self.pe)
+        self._pe = PE(sp_client_path, fast_load=True)
+        self._image_base, self._image_size = map_pe(self._mu, self._pe)
 
         logger.debug(
-            "PE mapped at 0x%X with size 0x%X", self.image_base, self.image_size
+            "PE mapped at 0x%X with size 0x%X", self._image_base, self._image_size
         )
 
         seh_hook.install(
-            self.mu,
-            self.image_base,
+            self._mu,
+            self._image_base,
             PATHS.RUNTIME_FUNCTIONS_JSON,
             PATHS.THROW_INFOS_JSON,
         )
 
-        self.heap = HeapAllocator.create(self.mu, MEM.HEAP_ADDR, MEM.HEAP_SIZE)
+        self._heap = HeapAllocator.create(self._mu, MEM.HEAP_ADDR, MEM.HEAP_SIZE)
 
-        stub_patches(self.mu, self.image_base)
-        hook_malloc(self.mu, self.image_base, self.heap)
+        stub_patches(self._mu, self._image_base)
+        hook_malloc(self._mu, self._image_base, self._heap)
 
-        runtime.setup_stack(self.mu)
-        runtime.setup_teb(self.mu)
+        runtime.setup_stack(self._mu)
+        runtime.setup_teb(self._mu)
 
-        self.vm_runtime_init = rebase(self.image_base, RT_FUNCTIONS.VM_RUNTIME_INIT_VA)
-        self.vm_object_transform = rebase(
-            self.image_base, RT_FUNCTIONS.VM_OBJECT_TRANSFORM_VA
+        self._vm_runtime_init = rebase(
+            self._image_base, RT_FUNCTIONS.VM_RUNTIME_INIT_VA
         )
-        self.initWithKey = rebase(self.image_base, RT_FUNCTIONS.INIT_WITH_KEY_VA)
-        self.generateKeystream = rebase(
-            self.image_base, RT_FUNCTIONS.GENERATE_KEYSTREAM_VA
+        self._vm_object_transform = rebase(
+            self._image_base, RT_FUNCTIONS.VM_OBJECT_TRANSFORM_VA
         )
-        self.seek_state_addr = rebase(self.image_base, RT_FUNCTIONS.SEEK_STATE_VA)
+        self._initWithKey = rebase(self._image_base, RT_FUNCTIONS.INIT_WITH_KEY_VA)
+        self._generateKeystream = rebase(
+            self._image_base, RT_FUNCTIONS.GENERATE_KEYSTREAM_VA
+        )
 
-        self.vmObj = self.heap.alloc(EMULATOR_SIZES.VM_OBJECT)
-        self.obfuscatedKey = self.heap.alloc(EMULATOR_SIZES.OBFUSCATED_KEY)
-        self.contentId = self.heap.alloc(EMULATOR_SIZES.CONTENT_ID)
-        self.derivedKey = self.heap.alloc(EMULATOR_SIZES.DERIVED_KEY)
-        self.state = self.heap.alloc(EMULATOR_SIZES.STATE)
-        self.out_word = self.heap.alloc(EMULATOR_SIZES.WORD)
-        self.key = self.heap.alloc(EMULATOR_SIZES.KEY)
+        self._vmObj = self._heap.alloc(EMULATOR_SIZES.VM_OBJECT)
+        self._obfuscatedKey = self._heap.alloc(EMULATOR_SIZES.OBFUSCATED_KEY)
+        self._contentId = self._heap.alloc(EMULATOR_SIZES.CONTENT_ID)
+        self._derivedKey = self._heap.alloc(EMULATOR_SIZES.DERIVED_KEY)
+        self._state = self._heap.alloc(EMULATOR_SIZES.STATE)
+        self._out_word = self._heap.alloc(EMULATOR_SIZES.WORD)
+        self._key = self._heap.alloc(EMULATOR_SIZES.KEY)
 
         self._playplay_token: bytearray | None = None
 
         self._init_runtime()
 
     def _init_runtime(self):
-        runtime.emulate_call(self.mu, self.vm_runtime_init, [self.vmObj.ptr(), 1])
+        rt_context = self._heap.alloc(0x10)
+        data = bytearray(rt_context.size)
+        struct.pack_into(
+            "<Q", data, 8, rebase(self._image_base, RT_DATA.RUNTIME_CONTEXT_VA)
+        )
+        rt_context.write(bytes(data))
+
+        runtime.emulate_call(
+            self._mu, self._vm_runtime_init, [self._vmObj.ptr(), rt_context.ptr(), 1]
+        )
 
     def _read_playplay_token(self) -> bytearray:
-        addr = rebase(self.image_base, PLAYPLAY_TOKEN.VA)
-        return self.mu.mem_read(addr, PLAYPLAY_TOKEN.SIZE)
+        addr = rebase(self._image_base, PLAYPLAY_TOKEN.VA)
+        return self._mu.mem_read(addr, PLAYPLAY_TOKEN.SIZE)
 
     @property
     def playplay_token(self) -> bytearray:
@@ -83,38 +95,29 @@ class KeyEmu:
         return self._playplay_token
 
     def configure(self, obfuscated_key: bytes, content_id: bytes):
-        self.obfuscatedKey.write(obfuscated_key)
-        self.contentId.write(content_id)
+        self._obfuscatedKey.write(obfuscated_key)
+        self._contentId.write(content_id)
 
         runtime.emulate_call(
-            self.mu,
-            self.vm_object_transform,
+            self._mu,
+            self._vm_object_transform,
             [
-                self.vmObj.ptr(),
-                self.obfuscatedKey.ptr(),
-                self.derivedKey.ptr(),
-                self.contentId.ptr(),
+                self._vmObj.ptr(),
+                self._obfuscatedKey.ptr(),
+                self._derivedKey.ptr(),
+                self._contentId.ptr(),
             ],
         )
-        logger.debug("Derived key: %s", self.derivedKey.read().hex())
+        logger.debug("Derived key: %s", self._derivedKey.read().hex())
 
         runtime.emulate_call(
-            self.mu,
-            self.initWithKey,
-            [self.state.ptr(), self.derivedKey.ptr(), self.out_word.ptr()],
+            self._mu,
+            self._initWithKey,
+            [self._state.ptr(), self._derivedKey.ptr(), self._out_word.ptr()],
         )
 
     def generate_keystream(self) -> bytearray:
         runtime.emulate_call(
-            self.mu, self.generateKeystream, [self.state.ptr(), self.key.ptr()]
+            self._mu, self._generateKeystream, [self._state.ptr(), self._key.ptr()]
         )
-        return self.key.read()
-
-    def seek_state(self, block_index: int) -> None:
-        runtime.emulate_call(
-            self.mu, self.seek_state_addr, [self.state.ptr(), block_index]
-        )
-
-    def seek_and_generate(self, block_index: int) -> bytearray:
-        self.seek_state(block_index)
-        return self.generate_keystream()
+        return self._key.read()
