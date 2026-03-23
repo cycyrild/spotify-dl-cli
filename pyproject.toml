@@ -17,7 +17,7 @@ include = ["spotify_dl_cli", "spotify_dl_cli.*"]
 
 [tool.setuptools.package-data]
 "spotify_dl_cli.playplay_emulator5" = [
-    "sp_client.exe",
+    "sp_client.dll",
     "generated/*"
 ]
 

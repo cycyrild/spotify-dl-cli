@@ -66,7 +66,7 @@ class KeyEmu:
         self._derivedKey = self._heap.alloc(EMULATOR_SIZES.DERIVED_KEY)
         self._state = self._heap.alloc(EMULATOR_SIZES.STATE)
         self._out_word = self._heap.alloc(EMULATOR_SIZES.WORD)
-        self._key = self._heap.alloc(EMULATOR_SIZES.KEY)
+        self._keyStream = self._heap.alloc(EMULATOR_SIZES.KEY)
 
         self._playplay_token: bytearray | None = None
 
@@ -118,6 +118,8 @@ class KeyEmu:
 
     def generate_keystream(self) -> bytearray:
         runtime.emulate_call(
-            self._mu, self._generateKeystream, [self._state.ptr(), self._key.ptr()]
+            self._mu,
+            self._generateKeystream,
+            [self._state.ptr(), self._keyStream.ptr()],
         )
-        return self._key.read()
+        return self._keyStream.read()

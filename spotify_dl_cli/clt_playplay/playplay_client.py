@@ -9,7 +9,7 @@ from .playplay_pb2 import (
 from urllib.parse import urljoin
 
 
-class PlayPlayClient:
+class PlayplayClient:
     _ENDPOINT_PATH = "/playplay/v1/key"
 
     def __init__(

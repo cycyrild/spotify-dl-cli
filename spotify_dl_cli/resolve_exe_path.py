@@ -10,6 +10,8 @@ def bundled_dll_path() -> Path:
     dll_path = package_dir / DEFAULT_SPOTIFY_CLIENT_DLL_NAME
 
     if not dll_path.is_file():
-        raise FileNotFoundError(f"Bundled dll for {SPOTIFY_APP_VERSION} is missing: {dll_path}.")
+        raise FileNotFoundError(
+            f"DLL for client version {SPOTIFY_APP_VERSION} is missing: {dll_path}"
+        )
 
     return dll_path

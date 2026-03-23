@@ -1,13 +1,12 @@
 from spotify_dl_cli.ogg_parser import reconstruct_ogg_from_chunks
 from typing import Iterator
-from spotify_dl_cli.playplay_emulator5.keygen import PlayPlayKeygen
+from spotify_dl_cli.playplay_emulator5.keygen import PlayplayKeygen
 from spotify_dl_cli.http_client.http_client import HttpClient
-from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import Track
 from spotify_dl_cli.sp_downloader.constants import CHUNK_SIZE
 
 
 def download_decrypt_and_reconstruct(
-    http: HttpClient, url: str, keygen: PlayPlayKeygen
+    http: HttpClient, url: str, keygen: PlayplayKeygen
 ) -> Iterator[bytes]:
     with http.stream(url, headers={"Range": "bytes=0-"}) as resp:
         resp.raise_for_status()
