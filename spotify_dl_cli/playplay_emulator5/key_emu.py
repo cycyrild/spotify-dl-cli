@@ -21,6 +21,7 @@ from spotify_dl_cli.playplay_emulator5.emu.hooks.hook_malloc import hook_malloc
 from spotify_dl_cli.playplay_emulator5.emu.hooks.stub_patches import stub_patches
 from spotify_dl_cli.playplay_emulator5.seh import seh_hook
 from spotify_dl_cli.playplay_emulator5.emu_session import _EmuSession
+from spotify_dl_cli.playplay_emulator5.seh.state_builder import build_state
 
 logger = logging.getLogger(__name__)
 
@@ -30,31 +31,37 @@ class KeyEmu:
         self._pe = PE(sp_client_path, fast_load=True)
         self._mapped_image = self._pe.get_memory_mapped_image()
 
+        self._image_base = getattr(self._pe.OPTIONAL_HEADER, "ImageBase")
+        self._image_size = align(len(self._mapped_image))
+
+        self._seh_state = build_state(
+            image_base=self._image_base,
+            runtime_functions_path=PATHS.RUNTIME_FUNCTIONS_JSON,
+            throw_infos_path=PATHS.THROW_INFOS_JSON,
+        )
+
         self._playplay_token: bytearray | None = None
         self._vm_obj_blob: bytearray | None = None
 
     def _create_session(self) -> _EmuSession:
         mu = Uc(UC_ARCH_X86, UC_MODE_64)
 
-        image_base: int = getattr(self._pe.OPTIONAL_HEADER, "ImageBase")
-        image_size: int = align(len(self._mapped_image))
-
         if not isinstance(self._mapped_image, bytes):
             raise
 
-        mu.mem_map(image_base, image_size)
-        mu.mem_write(image_base, self._mapped_image)
+        mu.mem_map(self._image_base, self._image_size)
+        mu.mem_write(self._image_base, self._mapped_image)
 
-        logger.debug("PE mapped at 0x%X with size 0x%X", image_base, image_size)
-
-        seh_hook.install(
-            mu, image_base, PATHS.RUNTIME_FUNCTIONS_JSON, PATHS.THROW_INFOS_JSON
+        logger.debug(
+            "PE mapped at 0x%X with size 0x%X", self._image_base, self._image_size
         )
+
+        seh_hook.install_seh_hook(mu, self._seh_state)
 
         heap = HeapAllocator.create(mu, MEM.HEAP_ADDR, MEM.HEAP_SIZE)
 
-        stub_patches(mu, image_base)
-        hook_malloc(mu, image_base, heap)
+        stub_patches(mu, self._image_base)
+        hook_malloc(mu, self._image_base, heap)
 
         runtime.setup_stack(mu)
         runtime.setup_teb(mu)
@@ -63,12 +70,14 @@ class KeyEmu:
 
         session = _EmuSession(
             mu=mu,
-            image_base=image_base,
-            image_size=image_size,
+            image_base=self._image_base,
+            image_size=self._image_size,
             heap=heap,
-            vm_object_transform=rebase(image_base, RT_FUNCTIONS.VM_OBJECT_TRANSFORM_VA),
-            vm_runtime_init=rebase(image_base, RT_FUNCTIONS.VM_RUNTIME_INIT_VA),
-            aes_key_va=rebase(image_base, AES_KEY_HOOK.TRIGGER_RIP),
+            vm_object_transform=rebase(
+                self._image_base, RT_FUNCTIONS.VM_OBJECT_TRANSFORM_VA
+            ),
+            vm_runtime_init=rebase(self._image_base, RT_FUNCTIONS.VM_RUNTIME_INIT_VA),
+            aes_key_va=rebase(self._image_base, AES_KEY_HOOK.TRIGGER_RIP),
             vm_obj=vm_obj,
             obfuscated_key=heap.alloc(EMULATOR_SIZES.OBFUSCATED_KEY),
             content_id=heap.alloc(EMULATOR_SIZES.CONTENT_ID),
@@ -118,7 +127,8 @@ class KeyEmu:
             self._playplay_token = self._read_playplay_token()
         return self._playplay_token
 
-    def _hook(self, mu: Uc, address: int, size: int, session: _EmuSession) -> None:
+    @staticmethod
+    def _hook(mu: Uc, address: int, size: int, session: _EmuSession) -> None:
         rax = mu.reg_read(UC_X86_REG_RAX)
         rbx = mu.reg_read(UC_X86_REG_RBX)
 

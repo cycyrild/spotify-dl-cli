@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from spotify_dl_cli.playplay_emulator5.seh.dispatcher import dispatch_cpp_exception
 from spotify_dl_cli.playplay_emulator5.seh.state import SehRuntimeState
 from unicorn import UC_HOOK_CODE
@@ -10,16 +9,11 @@ from unicorn.x86_const import (
     UC_X86_REG_RIP,
     UC_X86_REG_RSP,
 )
-from spotify_dl_cli.playplay_emulator5.seh.state_builder import build_state
 
 logger = logging.getLogger(__name__)
 
 
-def install(
-    mu: Uc, image_base: int, runtime_functions_path: Path, throw_infos_path: Path
-) -> SehRuntimeState:
-    state = build_state(image_base, runtime_functions_path, throw_infos_path)
-
+def install_seh_hook(mu: Uc, state: SehRuntimeState) -> None:
     logger.debug("image base            : 0x%X", state.image_base)
     logger.debug("_CxxThrowException   : 0x%X", state.cxx_throw_exception)
     logger.debug("dumped functions     : %d", len(state.runtime_functions))
@@ -32,7 +26,6 @@ def install(
         begin=state.cxx_throw_exception,
         end=state.cxx_throw_exception,
     )
-    return state
 
 
 def hook_code(mu: Uc, address: int, size: int, state: SehRuntimeState):

@@ -11,17 +11,14 @@ def download_decrypt_and_reconstruct(
     http: HttpClient, url: str, aes_key: bytes
 ) -> Iterator[bytes]:
     cipher = AES.new(
-        aes_key,
-        AES.MODE_CTR,
+        key=aes_key,
+        mode=AES.MODE_CTR,
         counter=Counter.new(AUDIO_AES.KEY_SIZE_BITS, initial_value=AUDIO_AES.IV),
     )
 
     with http.stream(url, headers={"Range": "bytes=0-"}) as resp:
         resp.raise_for_status()
-        decrypted_chunks = (
-            cipher.decrypt(chunk)
-            for chunk in resp.iter_content(chunk_size=CHUNK_SIZE)
-            if chunk
-        )
 
-        yield from reconstruct_ogg_from_chunks(decrypted_chunks)
+        yield from reconstruct_ogg_from_chunks(
+            cipher.decrypt(chunk) for chunk in resp.iter_content(chunk_size=CHUNK_SIZE)
+        )
