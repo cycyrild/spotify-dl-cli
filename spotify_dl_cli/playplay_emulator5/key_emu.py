@@ -6,6 +6,7 @@ from unicorn import UC_ARCH_X86, UC_HOOK_CODE, UC_MODE_64
 from unicorn.unicorn import Uc
 from unicorn.x86_const import UC_X86_REG_RAX, UC_X86_REG_RBX
 from spotify_dl_cli.playplay_emulator5.consts import (
+    AES_KEY_HOOK,
     EMULATOR_SIZES,
     MEM,
     PATHS,
@@ -28,7 +29,9 @@ class KeyEmu:
     def __init__(self, sp_client_path: Path) -> None:
         self._pe = PE(sp_client_path, fast_load=True)
         self._mapped_image = self._pe.get_memory_mapped_image()
+
         self._playplay_token: bytearray | None = None
+        self._vm_obj_blob: bytearray | None = None
 
     def _create_session(self) -> _EmuSession:
         mu = Uc(UC_ARCH_X86, UC_MODE_64)
@@ -56,6 +59,8 @@ class KeyEmu:
         runtime.setup_stack(mu)
         runtime.setup_teb(mu)
 
+        vm_obj = heap.alloc(EMULATOR_SIZES.VM_OBJECT)
+
         session = _EmuSession(
             mu=mu,
             image_base=image_base,
@@ -63,11 +68,12 @@ class KeyEmu:
             heap=heap,
             vm_object_transform=rebase(image_base, RT_FUNCTIONS.VM_OBJECT_TRANSFORM_VA),
             vm_runtime_init=rebase(image_base, RT_FUNCTIONS.VM_RUNTIME_INIT_VA),
-            aes_key_va=rebase(image_base, RT_DATA.AES_KEY_VA),
-            vm_obj=heap.alloc(EMULATOR_SIZES.VM_OBJECT),
+            aes_key_va=rebase(image_base, AES_KEY_HOOK.TRIGGER_RIP),
+            vm_obj=vm_obj,
             obfuscated_key=heap.alloc(EMULATOR_SIZES.OBFUSCATED_KEY),
             content_id=heap.alloc(EMULATOR_SIZES.CONTENT_ID),
             derived_key=heap.alloc(EMULATOR_SIZES.DERIVED_KEY),
+            captured_aes_key=None,
         )
 
         mu.hook_add(
@@ -78,7 +84,12 @@ class KeyEmu:
             end=session.aes_key_va,
         )
 
-        self._init_runtime(session)
+        if self._vm_obj_blob is None:
+            self._init_runtime(session)
+            self._vm_obj_blob = session.vm_obj.read()
+        else:
+            vm_obj.write(bytes(self._vm_obj_blob))
+
         return session
 
     def _init_runtime(self, session: _EmuSession) -> None:
@@ -111,8 +122,8 @@ class KeyEmu:
         rax = mu.reg_read(UC_X86_REG_RAX)
         rbx = mu.reg_read(UC_X86_REG_RBX)
 
-        if rax == 0 and rbx == 0x11FFF80:
-            logger.debug("Condition RAX=0 and RBX=0x11FFF80 met, capturing key")
+        if rax == AES_KEY_HOOK.TRIGGER_RAX and rbx == AES_KEY_HOOK.TRIGGER_RBX:
+            logger.debug("AES key hook triggered, capturing key")
             session.captured_aes_key = mu.mem_read(rbx, EMULATOR_SIZES.KEY)
             mu.emu_stop()
 

@@ -17,7 +17,6 @@ def stub_patches(mu: Uc, image_base: int):
         "_Mtx_lock": RT_HOOKS.MTX_LOCK_VA,
         "_Cnd_wait": RT_HOOKS.CND_WAIT_VA,
         "_Mtx_unlock": RT_HOOKS.MTX_UNLOCK_VA,
-        "sub_7FF6DFFBA474": RT_HOOKS.SUB_7FF6DFFBA474_VA,
     }
 
     for name, ida_va in targets.items():
