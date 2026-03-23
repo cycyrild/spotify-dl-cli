@@ -6,3 +6,4 @@ __pycache__/
 /build
 spotify_dl_cli/playplay_emulator*/sp_client*
 .ruff_cache/
+/analysis
