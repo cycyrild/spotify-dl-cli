@@ -3,6 +3,7 @@ from humanize import precisedelta
 from datetime import timedelta
 from pathlib import Path
 from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
+from spotify_dl_cli.playplay_emulator5.key_emu import KeyEmu
 from spotify_dl_cli.resolve_exe_path import bundled_dll_path
 from spotify_dl_cli.config import default_tokens_path
 from spotify_dl_cli.sp_auth.constants import CLIENT_ID
@@ -10,7 +11,6 @@ from spotify_dl_cli.sp_downloader.downloader import download_track, resolve_trac
 from spotify_dl_cli.parse_args import parse_args
 from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
 from spotify_dl_cli.http_client.http_client import HttpClient
-from spotify_dl_cli.playplay_emulator5.keygen import PlayplayKeygen
 from spotify_dl_cli.clt_extended_metadata.extended_metadata_client import (
     ExtendedMetadataClient,
 )
@@ -60,7 +60,7 @@ def main() -> None:
     exe_path = bundled_dll_path()
     logger.debug("Using sp_client dll: %s", exe_path)
 
-    keygen = PlayplayKeygen(exe_path)
+    keygen = KeyEmu(exe_path)
     sp_endpoints = resolve_spotify_endpoints()
 
     if not sp_endpoints.spclient:
@@ -74,7 +74,7 @@ def main() -> None:
     client = HttpClient(access_token)
     metadata = ExtendedMetadataClient(sp_client_base, client)
     resolver = StorageResolverClient(sp_client_base, client)
-    playplay = PlayplayClient(sp_client_base, keygen.playplay_token, client)
+    playplay = PlayplayClient(sp_client_base, bytes(keygen.playplay_token), client)
     playlist_client = PlaylistClient(sp_client_base, client)
 
     all_track_uris = resolve_track_uris(args.uris, playlist_client)

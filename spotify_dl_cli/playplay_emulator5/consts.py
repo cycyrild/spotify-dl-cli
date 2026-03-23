@@ -31,12 +31,11 @@ class RT_FUNCTIONS:
     VM_RUNTIME_INIT_VA = 0x00000001802DFFF0
     VM_OBJECT_TRANSFORM_VA = 0x00000001802E1E28
     CXX_THROW_EXCEPTION_VA = 0x0000000181537078
-    INIT_WITH_KEY_VA = 0x0000000180D3D098
-    GENERATE_KEYSTREAM_VA = 0x0000000180D3BEF0
 
 
 class RT_DATA:
     RUNTIME_CONTEXT_VA = 0x0000000181649FC0
+    AES_KEY_VA = 0x0000000181E21BE6
 
 
 class PLAYPLAY_TOKEN:
@@ -57,6 +56,27 @@ class EMULATOR_SIZES:
     DERIVED_KEY = 24
     OBFUSCATED_KEY = 16
     CONTENT_ID = 16
-    STATE = 744
-    WORD = 4
     KEY = 16
+
+
+AUDIO_AESIV = int.from_bytes(
+    [
+        0x72,
+        0xE0,
+        0x67,
+        0xFB,
+        0xDD,
+        0xCB,
+        0xCF,
+        0x77,
+        0xEB,
+        0xE8,
+        0xBC,
+        0x64,
+        0x3F,
+        0x63,
+        0x0D,
+        0x93,
+    ],
+    byteorder="big",
+)

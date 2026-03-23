@@ -4,8 +4,8 @@ from humanize import naturalsize
 from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
 from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
-from spotify_dl_cli.playplay_emulator5.keygen import PlayplayKeygen
 from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile, Track
+from spotify_dl_cli.playplay_emulator5.key_emu import KeyEmu
 from spotify_dl_cli.sp_downloader.generate_output_filename import (
     generate_output_filename,
 )
@@ -20,12 +20,13 @@ from spotify_dl_cli.sp_downloader.helpers import (
 )
 from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
 from typing import Iterable, Set
+from spotify_dl_cli.playplay_emulator5.consts import EMULATOR_SIZES
 
 logger = logging.getLogger(__name__)
 
 
 def _download_from_url(
-    http_client: HttpClient, url: str, output_path: Path, keygen: PlayplayKeygen
+    http_client: HttpClient, url: str, output_path: Path, aes_key: bytes
 ) -> None:
     head = http_client.head(url)
     total_size = int(head.headers["Content-Length"])
@@ -39,7 +40,7 @@ def _download_from_url(
             total=total_size, unit="B", unit_scale=True, unit_divisor=1024, leave=False
         ) as pbar,
     ):
-        for ogg_page in download_decrypt_and_reconstruct(http_client, url, keygen):
+        for ogg_page in download_decrypt_and_reconstruct(http_client, url, aes_key):
             size = len(ogg_page)
             f.write(ogg_page)
             pbar.update(size)
@@ -78,7 +79,7 @@ def download_track(
     track: Track,
     resolver: StorageResolverClient,
     playplay: PlayplayClient,
-    keygen: PlayplayKeygen,
+    keygen: KeyEmu,
     audio_format: AudioFile.Format,
     track_filename_template: str,
 ) -> None:
@@ -100,7 +101,10 @@ def download_track(
     obfuscated_key = playplay.get_obfuscated_key(file.file_id)
     logger.debug("Obfuscated key: %s", obfuscated_key.hex())
 
-    keygen.configure(file_id=file.file_id, obfuscated_key=obfuscated_key)
+    aes_key = keygen.get_aes_key(
+        content_id=file.file_id[: EMULATOR_SIZES.CONTENT_ID],
+        obfuscated_key=obfuscated_key,
+    )
 
     urls = resolver.resolve(file.file_id)
 
@@ -114,7 +118,7 @@ def download_track(
     downloaded = False
     for idx, url in enumerate(urls, start=1):
         try:
-            _download_from_url(http_client, url, output_path, keygen)
+            _download_from_url(http_client, url, output_path, aes_key)
 
         except Exception as exc:
             last_error = exc

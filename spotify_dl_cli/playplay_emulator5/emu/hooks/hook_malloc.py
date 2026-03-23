@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def hook_malloc(mu: Uc, image_base: int, heap: HeapAllocator):
-    addr = rebase(image_base, RT_HOOKS.MALLOC_VA)  # j__malloc_base
+    addr = rebase(image_base, RT_HOOKS.MALLOC_VA)
 
     def _cb(mu: Uc, args):
         size = args[0]

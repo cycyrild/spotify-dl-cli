@@ -1,92 +1,105 @@
 import logging
-from spotify_dl_cli.playplay_emulator5.emu.hooks.stub_patches import stub_patches
-from spotify_dl_cli.playplay_emulator5.emu.hooks.hook_malloc import hook_malloc
+import struct
+from pathlib import Path
 from pefile import PE
-from unicorn import UC_ARCH_X86, UC_MODE_64
+from unicorn import UC_ARCH_X86, UC_HOOK_CODE, UC_MODE_64
 from unicorn.unicorn import Uc
+from unicorn.x86_const import UC_X86_REG_RAX, UC_X86_REG_RBX
 from spotify_dl_cli.playplay_emulator5.consts import (
     EMULATOR_SIZES,
     MEM,
     PATHS,
     PLAYPLAY_TOKEN,
-    RT_FUNCTIONS,
     RT_DATA,
+    RT_FUNCTIONS,
 )
 from spotify_dl_cli.playplay_emulator5.emu import runtime
-from spotify_dl_cli.playplay_emulator5.emu.addressing import rebase
+from spotify_dl_cli.playplay_emulator5.emu.addressing import rebase, align
 from spotify_dl_cli.playplay_emulator5.emu.heap_allocator import HeapAllocator
+from spotify_dl_cli.playplay_emulator5.emu.hooks.hook_malloc import hook_malloc
+from spotify_dl_cli.playplay_emulator5.emu.hooks.stub_patches import stub_patches
 from spotify_dl_cli.playplay_emulator5.seh import seh_hook
-from spotify_dl_cli.playplay_emulator5.emu.map_pe import map_pe
-from pathlib import Path
-import struct
+from spotify_dl_cli.playplay_emulator5.emu_session import _EmuSession
 
 logger = logging.getLogger(__name__)
 
 
 class KeyEmu:
     def __init__(self, sp_client_path: Path) -> None:
-        self._mu = Uc(UC_ARCH_X86, UC_MODE_64)
-
         self._pe = PE(sp_client_path, fast_load=True)
-        self._image_base, self._image_size = map_pe(self._mu, self._pe)
-
-        logger.debug(
-            "PE mapped at 0x%X with size 0x%X", self._image_base, self._image_size
-        )
-
-        seh_hook.install(
-            self._mu,
-            self._image_base,
-            PATHS.RUNTIME_FUNCTIONS_JSON,
-            PATHS.THROW_INFOS_JSON,
-        )
-
-        self._heap = HeapAllocator.create(self._mu, MEM.HEAP_ADDR, MEM.HEAP_SIZE)
-
-        stub_patches(self._mu, self._image_base)
-        hook_malloc(self._mu, self._image_base, self._heap)
-
-        runtime.setup_stack(self._mu)
-        runtime.setup_teb(self._mu)
-
-        self._vm_runtime_init = rebase(
-            self._image_base, RT_FUNCTIONS.VM_RUNTIME_INIT_VA
-        )
-        self._vm_object_transform = rebase(
-            self._image_base, RT_FUNCTIONS.VM_OBJECT_TRANSFORM_VA
-        )
-        self._initWithKey = rebase(self._image_base, RT_FUNCTIONS.INIT_WITH_KEY_VA)
-        self._generateKeystream = rebase(
-            self._image_base, RT_FUNCTIONS.GENERATE_KEYSTREAM_VA
-        )
-
-        self._vmObj = self._heap.alloc(EMULATOR_SIZES.VM_OBJECT)
-        self._obfuscatedKey = self._heap.alloc(EMULATOR_SIZES.OBFUSCATED_KEY)
-        self._contentId = self._heap.alloc(EMULATOR_SIZES.CONTENT_ID)
-        self._derivedKey = self._heap.alloc(EMULATOR_SIZES.DERIVED_KEY)
-        self._state = self._heap.alloc(EMULATOR_SIZES.STATE)
-        self._out_word = self._heap.alloc(EMULATOR_SIZES.WORD)
-        self._keyStream = self._heap.alloc(EMULATOR_SIZES.KEY)
-
+        self._mapped_image = self._pe.get_memory_mapped_image()
         self._playplay_token: bytearray | None = None
 
-        self._init_runtime()
+    def _create_session(self) -> _EmuSession:
+        mu = Uc(UC_ARCH_X86, UC_MODE_64)
 
-    def _init_runtime(self):
-        rt_context = self._heap.alloc(0x10)
+        image_base: int = getattr(self._pe.OPTIONAL_HEADER, "ImageBase")
+        image_size: int = align(len(self._mapped_image))
+
+        if not isinstance(self._mapped_image, bytes):
+            raise
+
+        mu.mem_map(image_base, image_size)
+        mu.mem_write(image_base, self._mapped_image)
+
+        logger.debug("PE mapped at 0x%X with size 0x%X", image_base, image_size)
+
+        seh_hook.install(
+            mu, image_base, PATHS.RUNTIME_FUNCTIONS_JSON, PATHS.THROW_INFOS_JSON
+        )
+
+        heap = HeapAllocator.create(mu, MEM.HEAP_ADDR, MEM.HEAP_SIZE)
+
+        stub_patches(mu, image_base)
+        hook_malloc(mu, image_base, heap)
+
+        runtime.setup_stack(mu)
+        runtime.setup_teb(mu)
+
+        session = _EmuSession(
+            mu=mu,
+            image_base=image_base,
+            image_size=image_size,
+            heap=heap,
+            vm_object_transform=rebase(image_base, RT_FUNCTIONS.VM_OBJECT_TRANSFORM_VA),
+            vm_runtime_init=rebase(image_base, RT_FUNCTIONS.VM_RUNTIME_INIT_VA),
+            aes_key_va=rebase(image_base, RT_DATA.AES_KEY_VA),
+            vm_obj=heap.alloc(EMULATOR_SIZES.VM_OBJECT),
+            obfuscated_key=heap.alloc(EMULATOR_SIZES.OBFUSCATED_KEY),
+            content_id=heap.alloc(EMULATOR_SIZES.CONTENT_ID),
+            derived_key=heap.alloc(EMULATOR_SIZES.DERIVED_KEY),
+        )
+
+        mu.hook_add(
+            UC_HOOK_CODE,
+            self._hook,
+            session,
+            begin=session.aes_key_va,
+            end=session.aes_key_va,
+        )
+
+        self._init_runtime(session)
+        return session
+
+    def _init_runtime(self, session: _EmuSession) -> None:
+        rt_context = session.heap.alloc(0x10)
         data = bytearray(rt_context.size)
+
         struct.pack_into(
-            "<Q", data, 8, rebase(self._image_base, RT_DATA.RUNTIME_CONTEXT_VA)
+            "<Q", data, 8, rebase(session.image_base, RT_DATA.RUNTIME_CONTEXT_VA)
         )
         rt_context.write(bytes(data))
 
         runtime.emulate_call(
-            self._mu, self._vm_runtime_init, [self._vmObj.ptr(), rt_context.ptr(), 1]
+            session.mu,
+            session.vm_runtime_init,
+            [session.vm_obj.ptr(), rt_context.ptr(), 1],
         )
 
     def _read_playplay_token(self) -> bytearray:
-        addr = rebase(self._image_base, PLAYPLAY_TOKEN.VA)
-        return self._mu.mem_read(addr, PLAYPLAY_TOKEN.SIZE)
+        session = self._create_session()
+        addr = rebase(session.image_base, PLAYPLAY_TOKEN.VA)
+        return session.mu.mem_read(addr, PLAYPLAY_TOKEN.SIZE)
 
     @property
     def playplay_token(self) -> bytearray:
@@ -94,32 +107,33 @@ class KeyEmu:
             self._playplay_token = self._read_playplay_token()
         return self._playplay_token
 
-    def configure(self, obfuscated_key: bytes, content_id: bytes):
-        self._obfuscatedKey.write(obfuscated_key)
-        self._contentId.write(content_id)
+    def _hook(self, mu: Uc, address: int, size: int, session: _EmuSession) -> None:
+        rax = mu.reg_read(UC_X86_REG_RAX)
+        rbx = mu.reg_read(UC_X86_REG_RBX)
+
+        if rax == 0 and rbx == 0x11FFF80:
+            logger.debug("Condition RAX=0 and RBX=0x11FFF80 met, capturing key")
+            session.captured_aes_key = mu.mem_read(rbx, EMULATOR_SIZES.KEY)
+            mu.emu_stop()
+
+    def get_aes_key(self, obfuscated_key: bytes, content_id: bytes) -> bytearray:
+        session = self._create_session()
+
+        session.obfuscated_key.write(obfuscated_key)
+        session.content_id.write(content_id)
 
         runtime.emulate_call(
-            self._mu,
-            self._vm_object_transform,
+            session.mu,
+            session.vm_object_transform,
             [
-                self._vmObj.ptr(),
-                self._obfuscatedKey.ptr(),
-                self._derivedKey.ptr(),
-                self._contentId.ptr(),
+                session.vm_obj.ptr(),
+                session.obfuscated_key.ptr(),
+                session.derived_key.ptr(),
+                session.content_id.ptr(),
             ],
         )
-        logger.debug("Derived key: %s", self._derivedKey.read().hex())
 
-        runtime.emulate_call(
-            self._mu,
-            self._initWithKey,
-            [self._state.ptr(), self._derivedKey.ptr(), self._out_word.ptr()],
-        )
+        if session.captured_aes_key is None:
+            raise RuntimeError("Failed to capture decrypted key")
 
-    def generate_keystream(self) -> bytearray:
-        runtime.emulate_call(
-            self._mu,
-            self._generateKeystream,
-            [self._state.ptr(), self._keyStream.ptr()],
-        )
-        return self._keyStream.read()
+        return session.captured_aes_key
