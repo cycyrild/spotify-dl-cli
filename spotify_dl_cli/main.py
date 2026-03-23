@@ -7,7 +7,8 @@ from spotify_dl_cli.playplay_emulator5.key_emu import KeyEmu
 from spotify_dl_cli.resolve_exe_path import bundled_dll_path
 from spotify_dl_cli.config import default_tokens_path
 from spotify_dl_cli.sp_auth.constants import CLIENT_ID
-from spotify_dl_cli.sp_downloader.downloader import download_track, resolve_track_uris
+from spotify_dl_cli.sp_downloader.downloader import download_track
+from spotify_dl_cli.collect_track_uris import resolve_track_uris
 from spotify_dl_cli.parse_args import parse_args
 from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
 from spotify_dl_cli.http_client.http_client import HttpClient

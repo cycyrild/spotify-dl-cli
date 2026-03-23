@@ -17,4 +17,4 @@ class _EmuSession:
     obfuscated_key: HeapChunk
     content_id: HeapChunk
     derived_key: HeapChunk
-    captured_aes_key: bytearray | None = None
+    captured_aes_key: bytearray | None

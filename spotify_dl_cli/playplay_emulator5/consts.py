@@ -35,7 +35,12 @@ class RT_FUNCTIONS:
 
 class RT_DATA:
     RUNTIME_CONTEXT_VA = 0x0000000181649FC0
-    AES_KEY_VA = 0x0000000181E21BE6
+
+
+class AES_KEY_HOOK:
+    TRIGGER_RAX = 0
+    TRIGGER_RBX = 0x00000000011FFF80
+    TRIGGER_RIP = 0x0000000181E21BE6
 
 
 class PLAYPLAY_TOKEN:
@@ -47,7 +52,6 @@ class RT_HOOKS:
     MTX_LOCK_VA = 0x000000018151B660
     CND_WAIT_VA = 0x000000018151C804
     MTX_UNLOCK_VA = 0x000000018151B68C
-    SUB_7FF6DFFBA474_VA = 0x00000001803798E4
     MALLOC_VA = 0x0000000181546CC0
 
 
@@ -59,24 +63,26 @@ class EMULATOR_SIZES:
     KEY = 16
 
 
-AUDIO_AESIV = int.from_bytes(
-    [
-        0x72,
-        0xE0,
-        0x67,
-        0xFB,
-        0xDD,
-        0xCB,
-        0xCF,
-        0x77,
-        0xEB,
-        0xE8,
-        0xBC,
-        0x64,
-        0x3F,
-        0x63,
-        0x0D,
-        0x93,
-    ],
-    byteorder="big",
-)
+class AUDIO_AES:
+    KEY_SIZE_BITS = 128
+    IV = int.from_bytes(
+        [
+            0x72,
+            0xE0,
+            0x67,
+            0xFB,
+            0xDD,
+            0xCB,
+            0xCF,
+            0x77,
+            0xEB,
+            0xE8,
+            0xBC,
+            0x64,
+            0x3F,
+            0x63,
+            0x0D,
+            0x93,
+        ],
+        byteorder="big",
+    )
