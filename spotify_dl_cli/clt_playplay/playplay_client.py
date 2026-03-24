@@ -1,4 +1,13 @@
+import logging
 import time
+import requests
+from tenacity import (
+    retry,
+    wait_exponential,
+    stop_after_attempt,
+    retry_if_exception,
+    before_sleep_log,
+)
 from spotify_dl_cli.http_client.http_client import HttpClient
 from .playplay_pb2 import (
     ContentType,
@@ -7,6 +16,8 @@ from .playplay_pb2 import (
     PlayPlayLicenseResponse,
 )
 from urllib.parse import urljoin
+
+logger = logging.getLogger(__name__)
 
 
 class PlayplayClient:
@@ -19,10 +30,24 @@ class PlayplayClient:
         self._token = playplay_token
         self._http = http
 
+    @staticmethod
+    def _is_403_error(exception):
+        return (
+            isinstance(exception, requests.exceptions.HTTPError)
+            and exception.response is not None
+            and exception.response.status_code == 403
+        )
+
+    @retry(
+        retry=retry_if_exception(_is_403_error),
+        wait=wait_exponential(multiplier=5, min=5),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        stop=stop_after_attempt(8),
+        reraise=True,
+    )
     def get_obfuscated_key(self, file_id: bytes) -> bytes:
         url = self._build_url(file_id)
         payload = self._build_license_request()
-
         response = self._http.post_protobuf(url, payload)
         return self._parse_license_response(response.content)
 

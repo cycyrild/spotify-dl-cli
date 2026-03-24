@@ -9,3 +9,4 @@ mutagen
 platformdirs
 pydantic
 pycryptodome
+tenacity
