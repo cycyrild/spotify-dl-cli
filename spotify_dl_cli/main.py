@@ -21,7 +21,7 @@ from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
 from spotify_dl_cli.service_resolver import resolve_spotify_endpoints
 from spotify_dl_cli.sp_auth.pkce import SpotifyAuthPKCE
 from spotify_dl_cli.token_manager import SpotifyTokenManager
-from spotify_dl_cli.audio_formats import AUDIO_FORMATS
+from spotify_dl_cli.audio_formats import cli_to_format
 from spotify_dl_cli.playplay_emulator5.consts import PLAYPLAY_TOKEN
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def main() -> None:
 
     token_manager = SpotifyTokenManager(CLIENT_ID, tokens_file, auth_pkce)
 
-    audio_format = AUDIO_FORMATS[args.quality]
+    audio_format = cli_to_format(args.quality)
 
     exe_path = bundled_dll_path()
     logger.debug("Using sp_client dll: %s", exe_path)
@@ -87,7 +87,7 @@ def main() -> None:
 
     tracks = metadata.fetch_tracks(all_track_uris)
 
-    for uri, track in tracks.items():
+    for uri, (track, audio_files) in tracks.items():
         duration_str = precisedelta(timedelta(milliseconds=track.duration))
 
         logger.info("Track    : %s", track.name)
@@ -99,6 +99,7 @@ def main() -> None:
             client,
             base_dir,
             track,
+            audio_files,
             resolver,
             playplay,
             keygen,
