@@ -3,19 +3,24 @@ from unicorn.unicorn import Uc
 
 class HeapChunk:
     def __init__(self, mu: Uc, addr: int, size: int):
-        self.mu = mu
-        self.addr = addr
-        self.size = size
+        self._mu = mu
+        self._addr = addr
+        self._size = size
 
+    @property
     def ptr(self) -> int:
-        return self.addr
+        return self._addr
+
+    @property
+    def size(self) -> int:
+        return self._size
 
     def write(self, data: bytes) -> None:
-        if len(data) != self.size:
+        if len(data) != self._size:
             raise ValueError(
-                f"Data size {len(data)} does not match chunk size {self.size}"
+                f"Data size {len(data)} does not match chunk size {self._size}"
             )
-        self.mu.mem_write(self.addr, data)
+        self._mu.mem_write(self._addr, data)
 
     def read(self) -> bytearray:
-        return self.mu.mem_read(self.addr, self.size)
+        return self._mu.mem_read(self._addr, self._size)

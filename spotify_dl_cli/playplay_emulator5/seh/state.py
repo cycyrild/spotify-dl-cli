@@ -7,7 +7,7 @@ from spotify_dl_cli.playplay_emulator5.generated.throwinfo_models import ThrowIn
 from spotify_dl_cli.playplay_emulator5.seh.registers import UnwindRegNum
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class SehRuntimeState:
     image_base: int
     cxx_throw_exception: int
@@ -16,14 +16,14 @@ class SehRuntimeState:
     runtime_function_starts: List[int]
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ThrownException:
     object_va: int
     throw_info_va: int
     throw_info: ThrowInfo
 
 
-@dataclass
+@dataclass(slots=True)
 class VirtualContext:
     rip: int
     rsp: int

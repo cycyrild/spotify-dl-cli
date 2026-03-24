@@ -5,7 +5,7 @@ from unicorn.unicorn import Uc
 
 
 @dataclass(slots=True)
-class _EmuSession:
+class EmuSession:
     mu: Uc
     image_base: int
     image_size: int
