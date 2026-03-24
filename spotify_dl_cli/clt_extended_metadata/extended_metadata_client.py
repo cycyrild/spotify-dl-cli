@@ -1,7 +1,6 @@
 import uuid
-from urllib.parse import urljoin
 from collections.abc import Iterable
-from typing import Dict
+from urllib.parse import urljoin
 from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
 from .extendedmetadata_pb2 import (
     BatchedEntityRequest,
@@ -21,7 +20,7 @@ class ExtendedMetadataClient:
         self._http = http
         self._base_url = sp_client_base
 
-    def fetch_tracks(self, uris: Iterable[str]) -> Dict[str, Track]:
+    def fetch_tracks(self, uris: Iterable[str]) -> dict[str, Track]:
         self._validate_track_uris(uris)
 
         payload = self._build_tracks_request(uris)
@@ -54,11 +53,11 @@ class ExtendedMetadataClient:
         return request.SerializeToString()
 
     @staticmethod
-    def _parse_tracks_response(blob: bytes) -> Dict[str, Track]:
+    def _parse_tracks_response(blob: bytes) -> dict[str, Track]:
         response = BatchedExtensionResponse()
         response.ParseFromString(blob)
 
-        tracks: Dict[str, Track] = {}
+        tracks: dict[str, Track] = {}
 
         for group in response.extended_metadata:
             if group.extension_kind != ExtensionKind.TRACK_V4:

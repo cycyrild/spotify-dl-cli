@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import TextIO
 from unicorn import UC_HOOK_CODE
 from unicorn.unicorn import Uc
 from unicorn.x86_const import (
@@ -17,13 +18,13 @@ from capstone import Cs, CS_ARCH_X86, CS_MODE_64, CsInsn
 class TraceLogger:
     def __init__(self, path: Path, image_base: int):
         self.image_base = image_base
-        self.log_file = open(path, "w")
+        self.log_file: TextIO | None = path.open("w")
 
         self.md = Cs(CS_ARCH_X86, CS_MODE_64)
         self.md.detail = True
 
         self._mu: Uc | None = None
-        self._hook = None
+        self._hook: int | None = None
 
     def attach(self, mu: Uc):
         self._mu = mu
@@ -42,7 +43,7 @@ class TraceLogger:
             self.log_file.close()
             self.log_file = None
 
-    def _hook_code(self, mu: Uc, address: int, size: int, user_data):
+    def _hook_code(self, mu: Uc, address: int, size: int, _user_data: object):
         if not self.log_file:
             return
 
@@ -53,7 +54,7 @@ class TraceLogger:
             line = self._format_trace_line(insn, regs)
             self.log_file.write(line)
 
-    def _read_registers(self, mu: Uc):
+    def _read_registers(self, mu: Uc) -> dict[str, int]:
         return {
             "RAX": mu.reg_read(UC_X86_REG_RAX),
             "RBX": mu.reg_read(UC_X86_REG_RBX),
@@ -65,7 +66,7 @@ class TraceLogger:
             "RBP": mu.reg_read(UC_X86_REG_RBP),
         }
 
-    def _format_trace_line(self, insn: CsInsn, regs: dict[str, int]):
+    def _format_trace_line(self, insn: CsInsn, regs: dict[str, int]) -> str:
         rel = insn.address - self.image_base
         return (
             f"0x{rel:016X} | "

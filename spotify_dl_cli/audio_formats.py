@@ -1,9 +1,9 @@
-from typing import Dict
+from typing import cast
 from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile
 
 
-def audio_formats() -> Dict[str, AudioFile.Format]:
-    formats = {}
+def audio_formats() -> dict[str, AudioFile.Format]:
+    formats: dict[str, AudioFile.Format] = {}
 
     for name, value in AudioFile.Format.items():
         lower = name.lower()
@@ -12,7 +12,7 @@ def audio_formats() -> Dict[str, AudioFile.Format]:
             continue
 
         key = lower.replace("_", "-")
-        formats[key] = value
+        formats[key] = cast(AudioFile.Format, value)
 
     return formats
 

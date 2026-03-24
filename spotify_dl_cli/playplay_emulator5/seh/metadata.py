@@ -1,5 +1,6 @@
-from typing import Iterator, List
+from collections.abc import Iterator
 from spotify_dl_cli.playplay_emulator5.generated.runtimefunction_models import (
+    FuncInfo4,
     HandlerType4,
     IPToStateEntry4,
     RuntimeFunction,
@@ -10,14 +11,14 @@ from spotify_dl_cli.playplay_emulator5.generated.throwinfo_models import (
 )
 
 
-def get_handler_data(rf: RuntimeFunction):
+def get_handler_data(rf: RuntimeFunction) -> FuncInfo4 | None:
     exc_handler = rf.unwinds.exception_handler
     if exc_handler is None or exc_handler.name != "__GSHandlerCheck_EH4":
         return None
     return exc_handler.handler_data
 
 
-def get_ip_to_state_entries(rf: RuntimeFunction) -> List[IPToStateEntry4]:
+def get_ip_to_state_entries(rf: RuntimeFunction) -> list[IPToStateEntry4]:
     handler_data = get_handler_data(rf)
     if handler_data is None or handler_data.ip_to_state_map is None:
         return []

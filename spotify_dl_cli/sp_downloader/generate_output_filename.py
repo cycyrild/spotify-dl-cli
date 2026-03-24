@@ -9,7 +9,7 @@ _TEMPLATE_EXPR_RE = re.compile(r"\{([^}]+)\}")
 _PREFIX = "track."
 
 
-def slugify(value: str, replacement: str = " ") -> str:
+def _slugify(value: str) -> str:
     value = _INVALID_FILENAME_CHARS_RE.sub("", value)
     value = value.strip(" ._-")
     return value
@@ -62,7 +62,7 @@ def generate_output_filename(track: Track, template: str) -> str:
         if not isinstance(value, str):
             value = str(value)
 
-        return slugify(value)
+        return _slugify(value)
 
     rendered = _TEMPLATE_EXPR_RE.sub(replacer, template)
 

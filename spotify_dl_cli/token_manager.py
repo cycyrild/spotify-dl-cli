@@ -3,7 +3,6 @@ import logging
 import time
 import requests
 from pathlib import Path
-from typing import Optional
 from spotify_dl_cli.http_client.consts import BASE_HEADERS
 from spotify_dl_cli.sp_auth.pkce import SpotifyAuthPKCE
 from spotify_dl_cli.sp_auth.refresh_token_payload import RefreshTokenPayload
@@ -21,9 +20,9 @@ class SpotifyTokenManager:
         self._client_id = client_id
         self._token_file = token_file
         self._auth_provider = auth_provider
-        self._tokens: Optional[SpotifyTokens] = None
+        self._tokens: SpotifyTokens | None = None
 
-    def _load_tokens(self) -> Optional[SpotifyTokens]:
+    def _load_tokens(self) -> SpotifyTokens | None:
         if self._token_file.exists():
             with self._token_file.open("r") as f:
                 self._tokens = json.load(f)

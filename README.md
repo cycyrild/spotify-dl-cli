@@ -9,27 +9,34 @@ The project demonstrates how native routines embedded in a protected Windows app
 > [!WARNING]
 This project is **not functional out of the box**. Some required components cannot be included due to legal restrictions. It is provided **for exploration and educational purposes only**.
 
+## Latest improvements
+Changes
+* Bypass of Spotify Plaplay custom cipher
+* Removed full cipher derivation pipeline (derivedKey -> state -> generate_keystream)
+* Direct capture of native AES decryption key
+
+Benefits
+* Significantly faster decryption
+* Eliminates 16-byte keystream generation loop
+* Generated AES keys remain valid across Playplay DRM changes (unless CDN encryption is modified)
+
+**NOTE:** Playplay 5 uses a virtual machine driven by MSVC C++ exceptions. A minimal Python SEH dispatcher was implemented to emulate `_CxxThrowException`.
+
 
 <sub>Discord: cyril13600</sub>
 ![](image.png)
 
 ## How it works (very, very quickly ...)
 
-This project focuses on analyzing the media processing layer of a proprietary desktop client.
+Instead of reproducing Spotify’s Playplay cipher, the emulator executes the native Playplay routine and **captures the final AES key directly in memory**.
 
-One of the challenges when studying protected software is that critical routines are often heavily obfuscated (for example through virtualization-based protection). Cleanly reimplementing such logic would require extensive deobfuscation.
+Process:
 
-Instead, this project executes the original routines inside a CPU emulator.
-
-A CPU emulator loads the Windows PE binary of the desktop client and executes selected native routines directly, allowing the project to reproduce parts of the playback workflow without reimplementing the protected logic.
-
-The high-level workflow is:
-
-1. The CLI requests media metadata and encrypted stream information.
-2. The client returns an `obfuscated_key` associated with the target media.
-3. The emulated client routine derives the playback key from the `obfuscated_key` and `content_id`.
-4. The encrypted media stream is processed in chunks.
-5. The resulting stream is reconstructed into valid Ogg pages and written locally for experimentation purposes.
+1. Run Playplay VM initialization
+2. Call `vm_object_transform` with `content_id` + `obfuscated_key`
+3. Hook the AES key generation point
+4. Capture the **runtime-generated AES-CTR key**
+5. Decrypt audio directly using native AES-CTR
 
 ## Legal Notice
 

@@ -1,4 +1,5 @@
 import struct
+from collections.abc import Sequence
 from unicorn.unicorn import Uc
 from spotify_dl_cli.playplay_emulator5.consts import MEM
 from spotify_dl_cli.playplay_emulator5.emu.addressing import align
@@ -22,7 +23,7 @@ def setup_teb(mu: Uc):
     mu.reg_write(UC_X86_REG_GS_BASE, MEM.TEB_ADDR)
 
 
-def emulate_call(mu: Uc, func: int, args):
+def emulate_call(mu: Uc, func: int, args: Sequence[int]):
     original_rsp = mu.reg_read(UC_X86_REG_RSP)
     rsp = mu.reg_read(UC_X86_REG_RSP)
 

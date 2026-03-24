@@ -28,21 +28,23 @@ def install_seh_hook(mu: Uc, state: SehRuntimeState) -> None:
     )
 
 
-def hook_code(mu: Uc, address: int, size: int, state: SehRuntimeState):
+def hook_code(mu: Uc, address: int, _size: int, state: SehRuntimeState):
     if address != state.cxx_throw_exception:
         return
 
-    pExceptionObject = mu.reg_read(UC_X86_REG_RCX)
-    pThrowInfo = mu.reg_read(UC_X86_REG_RDX)
+    exception_object_ptr = mu.reg_read(UC_X86_REG_RCX)
+    throw_info_ptr = mu.reg_read(UC_X86_REG_RDX)
 
     logger.debug("=== CxxThrowException ===")
     logger.debug("VA: 0x%X", address)
     logger.debug("RVA: 0x%X", address - state.image_base)
-    logger.debug("pExceptionObject: 0x%X", pExceptionObject)
-    logger.debug("pThrowInfo: 0x%X", pThrowInfo)
+    logger.debug("pExceptionObject: 0x%X", exception_object_ptr)
+    logger.debug("pThrowInfo: 0x%X", throw_info_ptr)
 
     try:
-        handled = dispatch_cpp_exception(state, mu, pExceptionObject, pThrowInfo)
+        handled = dispatch_cpp_exception(
+            state, mu, exception_object_ptr, throw_info_ptr
+        )
     except Exception as exc:
         logger.error("dispatch error: %s", exc)
         raise

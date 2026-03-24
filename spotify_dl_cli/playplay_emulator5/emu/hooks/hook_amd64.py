@@ -1,3 +1,4 @@
+from collections.abc import Callable, Sequence
 from unicorn.x86_const import (
     UC_X86_REG_RAX,
     UC_X86_REG_RCX,
@@ -13,9 +14,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+HookCallback = Callable[[Uc, Sequence[int]], int | None]
 
-def hook_amd64(mu: Uc, addr: int, callback):
-    def _hook(mu: Uc, address: int, size: int, user_data):
+
+def hook_amd64(mu: Uc, addr: int, callback: HookCallback):
+    def _hook(mu: Uc, address: int, _size: int, _user_data: object):
         args = [
             mu.reg_read(UC_X86_REG_RCX),
             mu.reg_read(UC_X86_REG_RDX),

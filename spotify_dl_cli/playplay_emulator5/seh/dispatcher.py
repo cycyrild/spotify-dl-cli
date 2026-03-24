@@ -1,6 +1,5 @@
 from bisect import bisect_right
 import logging
-from typing import List, Optional, Tuple
 from spotify_dl_cli.playplay_emulator5.emu.memory import (
     read_bytes,
     write_bytes,
@@ -43,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 def lookup_runtime_function(
     state: SehRuntimeState, control_pc_va: int
-) -> Optional[RuntimeFunction]:
+) -> RuntimeFunction | None:
     control_pc_rva = control_pc_va - state.image_base
     index = bisect_right(state.runtime_function_starts, control_pc_rva) - 1
     if index < 0:
@@ -70,7 +69,7 @@ def build_thrown_exception_from_static_data(
     )
 
 
-def lookup_ip_state(ip_to_state_map: List[IPToStateEntry4], control_pc_rva: int) -> int:
+def lookup_ip_state(ip_to_state_map: list[IPToStateEntry4], control_pc_rva: int) -> int:
     state = -1
     for entry in ip_to_state_map:
         if control_pc_rva >= entry.ip:
@@ -85,7 +84,7 @@ def find_matching_handler(
     exc: ThrownException,
     rf: RuntimeFunction,
     control_pc_rva: int,
-) -> Optional[Tuple[HandlerType4, Optional[CatchableType]]]:
+) -> tuple[HandlerType4, CatchableType | None] | None:
     handler_data = get_handler_data(rf)
     if handler_data is None or handler_data.try_block_map is None:
         return None
@@ -117,7 +116,7 @@ def materialize_catch_object(
     ctx: VirtualContext,
     exc: ThrownException,
     handler: HandlerType4,
-    ct: Optional[CatchableType],
+    ct: CatchableType | None,
 ):
     if handler.disp_catch_obj is None or ct is None:
         return

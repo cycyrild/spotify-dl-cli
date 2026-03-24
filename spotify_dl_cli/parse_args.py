@@ -1,7 +1,8 @@
 import argparse
-import logging
 import sys
 from .audio_formats import AUDIO_FORMATS
+
+LOG_LEVEL_CHOICES = ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG")
 
 
 def parse_args() -> argparse.Namespace:
@@ -18,12 +19,6 @@ def parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
 
-    log_level_choices = tuple(
-        name
-        for name, value in logging._nameToLevel.items()
-        if isinstance(value, int) and name != "NOTSET"
-    )
-
     parser.add_argument("uris", nargs="+", help="Spotify URIs (track or playlist)")
 
     parser.add_argument(
@@ -33,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="music")
 
     parser.add_argument(
-        "--log-level", default="INFO", choices=log_level_choices, help="Log level"
+        "--log-level", default="INFO", choices=LOG_LEVEL_CHOICES, help="Log level"
     )
 
     parser.add_argument(

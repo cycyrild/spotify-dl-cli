@@ -6,7 +6,7 @@ from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import Track
 from spotify_dl_cli.http_client.http_client import HttpClient
 
 
-def _set_tag(tags: dict[str, list[str]], key: str, value) -> None:
+def _set_tag(tags: dict[str, list[str]], key: str, value: object | None) -> None:
     if value is None:
         return
 
@@ -19,7 +19,7 @@ def _set_tag(tags: dict[str, list[str]], key: str, value) -> None:
     tags[key] = [str(value)]
 
 
-def _add_tag(tags: dict[str, list[str]], key: str, value) -> None:
+def _add_tag(tags: dict[str, list[str]], key: str, value: object | None) -> None:
     if value is None:
         return
 
@@ -62,7 +62,7 @@ def _download_largest_cover(track: Track, http_client: HttpClient) -> bytes | No
     return resp.content
 
 
-def build_tags(track: Track) -> dict[str, list[str]]:
+def _build_tags(track: Track) -> dict[str, list[str]]:
     tags: dict[str, list[str]] = {}
 
     _set_tag(tags, "TITLE", track.name)
@@ -136,7 +136,7 @@ def apply_metadata(output_path: Path, track: Track, http_client: HttpClient) -> 
     audio = OggVorbis(output_path)
     audio.clear()
 
-    for key, values in build_tags(track).items():
+    for key, values in _build_tags(track).items():
         audio[key] = values
 
     cover_bytes = _download_largest_cover(track, http_client)

@@ -1,6 +1,5 @@
 from spotify_dl_cli.http_client.http_client import HttpClient
 from .storage_resolve_pb2 import StorageResolveResponse
-from typing import List
 from urllib.parse import urljoin
 
 
@@ -11,7 +10,7 @@ class StorageResolverClient:
         self._http = http
         self._base_url = sp_client_base
 
-    def resolve(self, file_id: bytes) -> List[str]:
+    def resolve(self, file_id: bytes) -> list[str]:
         url = self._build_url(file_id)
         response = self._http.get_protobuf(url)
         return self._parse_response(response)
@@ -20,7 +19,7 @@ class StorageResolverClient:
         return urljoin(self._base_url, f"{self._ENDPOINT_PATH}/{file_id.hex()}")
 
     @staticmethod
-    def _parse_response(blob: bytes) -> List[str]:
+    def _parse_response(blob: bytes) -> list[str]:
         response = StorageResolveResponse()
         response.ParseFromString(blob)
 

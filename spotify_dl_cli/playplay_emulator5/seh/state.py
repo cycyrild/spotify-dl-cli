@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, List
 from spotify_dl_cli.playplay_emulator5.generated.runtimefunction_models import (
     RuntimeFunction,
 )
@@ -11,9 +10,9 @@ from spotify_dl_cli.playplay_emulator5.seh.registers import UnwindRegNum
 class SehRuntimeState:
     image_base: int
     cxx_throw_exception: int
-    runtime_functions: List[RuntimeFunction]
-    throw_infos: Dict[int, ThrowInfo]
-    runtime_function_starts: List[int]
+    runtime_functions: list[RuntimeFunction]
+    throw_infos: dict[int, ThrowInfo]
+    runtime_function_starts: list[int]
 
 
 @dataclass(slots=True, frozen=True)
@@ -27,7 +26,7 @@ class ThrownException:
 class VirtualContext:
     rip: int
     rsp: int
-    regs: Dict[int, int]
+    regs: dict[int, int]
 
     def get_reg(self, regnum: int) -> int:
         if regnum == UnwindRegNum.RSP:

@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import logging
 from pathlib import Path
 from humanize import naturalsize
@@ -19,13 +20,12 @@ from spotify_dl_cli.playplay_emulator5.consts import EMULATOR_SIZES
 logger = logging.getLogger(__name__)
 
 
-def _iter_audio_files(track):
+def _iter_audio_files(track: Track) -> Iterator[AudioFile]:
     if hasattr(track, "file"):
-        for f in track.file:
-            yield f
+        yield from track.file
+
     for alt in track.alternative:
-        for f in alt.file:
-            yield f
+        yield from alt.file
 
 
 def _download_from_url(
@@ -38,7 +38,7 @@ def _download_from_url(
     logger.info("Downloading: %s", output_path)
 
     with (
-        open(output_path, "wb") as f,
+        output_path.open("wb") as f,
         tqdm(
             total=total_size, unit="B", unit_scale=True, unit_divisor=1024, leave=False
         ) as pbar,
@@ -49,7 +49,7 @@ def _download_from_url(
             pbar.update(size)
 
 
-def download_with_fallback(
+def _download_with_fallback(
     http_client: HttpClient, urls: list[str], output_path: Path, aes_key: bytes
 ) -> None:
     last_error = None
@@ -98,8 +98,6 @@ def download_track(
         logger.warning("Audio format unavailable, skipping track")
         return
 
-    logger.debug("File ID: %s", file.file_id.hex())
-
     obfuscated_key = playplay.get_obfuscated_key(file.file_id)
     logger.debug("Obfuscated key: %s", obfuscated_key.hex())
 
@@ -107,7 +105,8 @@ def download_track(
         content_id=file.file_id[: EMULATOR_SIZES.CONTENT_ID],
         obfuscated_key=obfuscated_key,
     )
-    logger.debug("AES key: %s", aes_key.hex())
+    logger.info("Download Quality: %s", AudioFile.Format.Name(file.format))
+    logger.info("File ID: %s, AES key: %s", file.file_id.hex(), aes_key.hex())
 
     urls = resolver.resolve(file.file_id)
 
@@ -117,7 +116,7 @@ def download_track(
     output_path = f"{generate_output_filename(track, track_filename_template)}.ogg"
     output_path = output_dir / output_path
 
-    download_with_fallback(http_client, urls, output_path, aes_key)
+    _download_with_fallback(http_client, urls, output_path, aes_key)
 
     logger.debug("Applying metadata tags ...")
     apply_metadata(output_path, track, http_client)

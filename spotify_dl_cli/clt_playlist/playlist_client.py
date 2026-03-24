@@ -1,5 +1,4 @@
-from urllib.parse import urljoin, urlencode, urlparse, parse_qsl, urlunparse
-from typing import List, Optional
+from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.clt_playlist.playlist4_external_pb2 import SelectedListContent
 from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
@@ -12,11 +11,11 @@ class PlaylistClient:
         self._base_url = sp_client_base
         self._http = http
 
-    def fetch_all_track_uris(self, playlist_uri: str) -> List[str]:
+    def fetch_all_track_uris(self, playlist_uri: str) -> list[str]:
         _, playlist_id = parse_spotify_uri(playlist_uri, expected_type="playlist")
         url = self._build_url(playlist_id)
 
-        uris: List[str] = []
+        uris: list[str] = []
 
         while url:
             response = self._http.get_protobuf(url)
@@ -34,8 +33,8 @@ class PlaylistClient:
         return urljoin(self._base_url, path)
 
     @staticmethod
-    def _extract_uris(content: SelectedListContent) -> List[str]:
-        uris: List[str] = []
+    def _extract_uris(content: SelectedListContent) -> list[str]:
+        uris: list[str] = []
 
         if not content.HasField("contents"):
             return uris
@@ -51,7 +50,7 @@ class PlaylistClient:
 
     def _get_next_page(
         self, current_url: str, content: SelectedListContent
-    ) -> Optional[str]:
+    ) -> str | None:
 
         if not content.HasField("contents"):
             return None

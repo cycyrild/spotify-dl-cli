@@ -1,4 +1,3 @@
-from typing import Dict
 from spotify_dl_cli.playplay_emulator5.emu.memory import read_u64
 from spotify_dl_cli.playplay_emulator5.generated.runtimefunction_models import (
     RuntimeFunction,
@@ -20,7 +19,7 @@ def capture_context_from_throw_entry(mu: Uc) -> VirtualContext:
     rsp = mu.reg_read(UC_X86_REG_RSP)
     caller_rip = read_u64(mu, rsp)
 
-    regs: Dict[int, int] = {}
+    regs: dict[int, int] = {}
     for regnum, uc_reg in UNWIND_GPR_REGNUM_TO_UC.items():
         regs[regnum] = mu.reg_read(uc_reg)
 

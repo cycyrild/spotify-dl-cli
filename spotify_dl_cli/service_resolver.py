@@ -1,12 +1,12 @@
 import requests
-from typing import List, NamedTuple
+from typing import NamedTuple
 from urllib.parse import urlparse
 from spotify_dl_cli.http_client.consts import BASE_HEADERS
 
 
 class SpotifyEndpoints(NamedTuple):
-    dealer: List[str]
-    spclient: List[str]
+    dealer: list[str]
+    spclient: list[str]
 
 
 APRESOLVE_URL = "https://apresolve.spotify.com/"

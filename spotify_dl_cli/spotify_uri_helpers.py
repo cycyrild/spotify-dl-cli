@@ -1,7 +1,4 @@
-from typing import Tuple
-
-
-def parse_spotify_uri(uri: str, expected_type: str | None = None) -> Tuple[str, str]:
+def parse_spotify_uri(uri: str, expected_type: str | None = None) -> tuple[str, str]:
     if not isinstance(uri, str):
         raise TypeError(f"URI must be a string, got {type(uri).__name__}")
 

@@ -6,7 +6,7 @@ from queue import Queue
 logger = logging.getLogger(__name__)
 
 
-def make_callback_handler(queue: Queue[str]):
+def make_callback_handler(queue: Queue[str]) -> type[BaseHTTPRequestHandler]:
     class CallbackHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             parsed = urllib.parse.urlparse(self.path)
@@ -25,7 +25,7 @@ def make_callback_handler(queue: Queue[str]):
                 self.send_response(400)
                 self.end_headers()
 
-        def log_message(self, format: str, *args) -> None:
+        def log_message(self, format: str, *args: object) -> None:
             logger.debug("%s - %s", self.client_address[0], format % args)
 
     return CallbackHandler

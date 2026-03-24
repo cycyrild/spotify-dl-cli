@@ -2,6 +2,9 @@ from pathlib import Path
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 
+# Linked to the Spotify.dll - 1.2.85.519
+# SHA2: 331A0CCD18565E0C05CD6A80910E2A6E69A464751581AA71C0B3A72C4D0F83AD
+
 
 class PATHS:
     GENERATED_DIR = PACKAGE_DIR / "generated"
@@ -44,8 +47,7 @@ class AES_KEY_HOOK:
 
 
 class PLAYPLAY_TOKEN:
-    VA = 0x000000018164C240
-    SIZE = 16
+    VALUE = bytes.fromhex("016D06F5F92B0517911BB15D7FE2C7E9")
 
 
 class RT_HOOKS:
@@ -65,24 +67,4 @@ class EMULATOR_SIZES:
 
 class AUDIO_AES:
     KEY_SIZE_BITS = 128
-    IV = int.from_bytes(
-        [
-            0x72,
-            0xE0,
-            0x67,
-            0xFB,
-            0xDD,
-            0xCB,
-            0xCF,
-            0x77,
-            0xEB,
-            0xE8,
-            0xBC,
-            0x64,
-            0x3F,
-            0x63,
-            0x0D,
-            0x93,
-        ],
-        byteorder="big",
-    )
+    IV = int.from_bytes(bytes.fromhex("72E067FBDDCBCF77EBE8BC643F630D93"), "big")

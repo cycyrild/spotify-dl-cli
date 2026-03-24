@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from typing import Iterable, Iterator, Optional, Tuple
 import struct
+from collections.abc import Iterable, Iterator
 
 """
 Incremental Ogg parser in pure Python allowing the reconstruction and structural validation of an Ogg stream from fragmented data.
@@ -47,7 +47,7 @@ class ParsedPage:
     serial: int
 
 
-def _try_parse_page_at(buf: bytearray, start: int) -> Optional[ParsedPage]:
+def _try_parse_page_at(buf: bytearray, start: int) -> ParsedPage | None:
     if len(buf) < start + OGG_HEADER_FIXED_SIZE:
         return None
 
@@ -94,7 +94,7 @@ def _try_parse_page_at(buf: bytearray, start: int) -> Optional[ParsedPage]:
 
 def parse_ogg_pages_from_buffer(
     buf: bytearray,
-) -> Iterator[Tuple[bytes, bool, int, int]]:
+) -> Iterator[tuple[bytes, bool, int, int]]:
     scan = 0
     consume_upto = 0
 

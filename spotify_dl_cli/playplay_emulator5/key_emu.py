@@ -10,7 +10,6 @@ from spotify_dl_cli.playplay_emulator5.consts import (
     EMULATOR_SIZES,
     MEM,
     PATHS,
-    PLAYPLAY_TOKEN,
     RT_DATA,
     RT_FUNCTIONS,
 )
@@ -40,7 +39,6 @@ class KeyEmu:
             throw_infos_path=PATHS.THROW_INFOS_JSON,
         )
 
-        self._playplay_token: bytearray | None = None
         self._vm_obj_blob: bytearray | None = None
 
     def _create_session(self) -> EmuSession:
@@ -113,17 +111,6 @@ class KeyEmu:
         runtime.emulate_call(
             session.mu, session.vm_runtime_init, [session.vm_obj.ptr, rt_context.ptr, 1]
         )
-
-    def _read_playplay_token(self) -> bytearray:
-        session = self._create_session()
-        addr = rebase(session.image_base, PLAYPLAY_TOKEN.VA)
-        return session.mu.mem_read(addr, PLAYPLAY_TOKEN.SIZE)
-
-    @property
-    def playplay_token(self) -> bytearray:
-        if self._playplay_token is None:
-            self._playplay_token = self._read_playplay_token()
-        return self._playplay_token
 
     @staticmethod
     def _hook(mu: Uc, address: int, size: int, session: EmuSession) -> None:

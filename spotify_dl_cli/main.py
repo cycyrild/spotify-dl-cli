@@ -22,6 +22,7 @@ from spotify_dl_cli.service_resolver import resolve_spotify_endpoints
 from spotify_dl_cli.sp_auth.pkce import SpotifyAuthPKCE
 from spotify_dl_cli.token_manager import SpotifyTokenManager
 from spotify_dl_cli.audio_formats import AUDIO_FORMATS
+from spotify_dl_cli.playplay_emulator5.consts import PLAYPLAY_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ def main() -> None:
     client = HttpClient(access_token)
     metadata = ExtendedMetadataClient(sp_client_base, client)
     resolver = StorageResolverClient(sp_client_base, client)
-    playplay = PlayplayClient(sp_client_base, bytes(keygen.playplay_token), client)
+    playplay = PlayplayClient(sp_client_base, PLAYPLAY_TOKEN.VALUE, client)
     playlist_client = PlaylistClient(sp_client_base, client)
 
     all_track_uris = resolve_track_uris(args.uris, playlist_client)

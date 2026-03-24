@@ -14,7 +14,7 @@ class HeapAllocator:
         self._chunks: list[HeapChunk] = []
 
     @classmethod
-    def create(cls, mu: Uc, base_addr: int, size: int):
+    def create(cls, mu: Uc, base_addr: int, size: int) -> "HeapAllocator":
         mu.mem_map(base_addr, align(size))
         return cls(mu, base_addr, size)
 
