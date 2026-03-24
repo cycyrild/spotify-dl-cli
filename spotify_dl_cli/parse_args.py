@@ -1,6 +1,6 @@
 import argparse
 import sys
-from .audio_formats import AUDIO_FORMATS
+from .audio_formats import CLI_FORMATS
 
 LOG_LEVEL_CHOICES = ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG")
 
@@ -21,9 +21,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("uris", nargs="+", help="Spotify URIs (track or playlist)")
 
-    parser.add_argument(
-        "--quality", choices=sorted(AUDIO_FORMATS.keys()), default="ogg-vorbis-160"
-    )
+    parser.add_argument("--quality", choices=CLI_FORMATS, default="ogg-vorbis-160")
 
     parser.add_argument("--output-dir", default="music")
 

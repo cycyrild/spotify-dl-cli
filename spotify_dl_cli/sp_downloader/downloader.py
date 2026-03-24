@@ -1,7 +1,7 @@
-from collections.abc import Iterator
 import logging
 from pathlib import Path
 from humanize import naturalsize
+from spotify_dl_cli.audio_formats import format_to_cli, format_to_extension
 from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
 from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile, Track
@@ -9,27 +9,29 @@ from spotify_dl_cli.playplay_emulator5.key_emu import KeyEmu
 from spotify_dl_cli.sp_downloader.generate_output_filename import (
     generate_output_filename,
 )
-from spotify_dl_cli.sp_downloader.apply_metadata import apply_metadata
 from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
     StorageResolverClient,
 )
 from tqdm import tqdm
-from spotify_dl_cli.sp_downloader.transfer import download_decrypt_and_reconstruct
+from spotify_dl_cli.sp_downloader.transfer import download_decrypt
 from spotify_dl_cli.playplay_emulator5.consts import EMULATOR_SIZES
+from spotify_dl_cli.clt_extended_metadata.audio_files_extension_pb2 import (
+    AudioFilesExtensionResponse,
+    ExtendedAudioFile,
+)
+from spotify_dl_cli.audio_formats import VORBIS_FORMATS
+from spotify_dl_cli.ogg_parser import reconstruct_ogg_from_chunks
+from spotify_dl_cli.sp_downloader.apply_metadata import apply_metadata
 
 logger = logging.getLogger(__name__)
 
 
-def _iter_audio_files(track: Track) -> Iterator[AudioFile]:
-    if hasattr(track, "file"):
-        yield from track.file
-
-    for alt in track.alternative:
-        yield from alt.file
-
-
 def _download_from_url(
-    http_client: HttpClient, url: str, output_path: Path, aes_key: bytes
+    http_client: HttpClient,
+    url: str,
+    file_format: AudioFile.Format,
+    output_path: Path,
+    aes_key: bytes,
 ) -> None:
     head = http_client.head(url)
     total_size = int(head.headers["Content-Length"])
@@ -43,20 +45,28 @@ def _download_from_url(
             total=total_size, unit="B", unit_scale=True, unit_divisor=1024, leave=False
         ) as pbar,
     ):
-        for ogg_page in download_decrypt_and_reconstruct(http_client, url, aes_key):
-            size = len(ogg_page)
-            f.write(ogg_page)
-            pbar.update(size)
+        chunks = download_decrypt(http_client, url, aes_key)
+
+        if file_format in VORBIS_FORMATS:
+            chunks = reconstruct_ogg_from_chunks(chunks)
+
+        for chunk in chunks:
+            f.write(chunk)
+            pbar.update(len(chunk))
 
 
 def _download_with_fallback(
-    http_client: HttpClient, urls: list[str], output_path: Path, aes_key: bytes
+    http_client: HttpClient,
+    urls: list[str],
+    file_format: AudioFile.Format,
+    output_path: Path,
+    aes_key: bytes,
 ) -> None:
     last_error = None
 
     for idx, url in enumerate(urls, start=1):
         try:
-            _download_from_url(http_client, url, output_path, aes_key)
+            _download_from_url(http_client, url, file_format, output_path, aes_key)
             return
         except Exception as exc:
             last_error = exc
@@ -79,24 +89,31 @@ def download_track(
     http_client: HttpClient,
     output_dir: Path,
     track: Track,
+    audio_files: AudioFilesExtensionResponse,
     resolver: StorageResolverClient,
     playplay: PlayplayClient,
     keygen: KeyEmu,
     audio_format: AudioFile.Format,
     track_filename_template: str,
 ) -> None:
-
-    audio_files = list(_iter_audio_files(track))
-
     logger.debug(
-        "Available formats: %s", [AudioFile.Format.Name(f.format) for f in audio_files]
+        "Available formats: %s",
+        [
+            fmt
+            for f in audio_files.files
+            if (fmt := format_to_cli(f.file.format)) is not None
+        ],
     )
 
-    file = next((f for f in audio_files if f.format == audio_format), None)
+    extended_file: ExtendedAudioFile | None = next(
+        (f for f in audio_files.files if f.file.format == audio_format), None
+    )
 
-    if not file:
+    if not extended_file:
         logger.warning("Audio format unavailable, skipping track")
         return
+
+    file = extended_file.file
 
     obfuscated_key = playplay.get_obfuscated_key(file.file_id)
     logger.debug("Obfuscated key: %s", obfuscated_key.hex())
@@ -105,20 +122,20 @@ def download_track(
         content_id=file.file_id[: EMULATOR_SIZES.CONTENT_ID],
         obfuscated_key=obfuscated_key,
     )
-    logger.info("Download Quality: %s", AudioFile.Format.Name(file.format))
+    logger.info("Download Quality: %s", format_to_cli(file.format))
     logger.info("File ID: %s, AES key: %s", file.file_id.hex(), aes_key.hex())
 
-    urls = resolver.resolve(file.file_id)
+    urls = resolver.resolve(file.file_id, file.format)
 
     if not urls:
         raise RuntimeError("No URL returned by the resolver")
 
-    output_path = f"{generate_output_filename(track, track_filename_template)}.ogg"
+    output_path = f"{generate_output_filename(track, track_filename_template)}.{format_to_extension(file.format)}"
     output_path = output_dir / output_path
 
-    _download_with_fallback(http_client, urls, output_path, aes_key)
+    _download_with_fallback(http_client, urls, file.format, output_path, aes_key)
 
     logger.debug("Applying metadata tags ...")
-    apply_metadata(output_path, track, http_client)
+    apply_metadata(output_path, file.format, track, http_client)
 
     logger.info("Download completed: %s", output_path)

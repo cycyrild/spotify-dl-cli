@@ -11,6 +11,9 @@ from .extendedmetadata_pb2 import (
     Track,
 )
 from spotify_dl_cli.http_client.http_client import HttpClient
+from spotify_dl_cli.clt_extended_metadata.audio_files_extension_pb2 import (
+    AudioFilesExtensionResponse,
+)
 
 
 class ExtendedMetadataClient:
@@ -20,7 +23,9 @@ class ExtendedMetadataClient:
         self._http = http
         self._base_url = sp_client_base
 
-    def fetch_tracks(self, uris: Iterable[str]) -> dict[str, Track]:
+    def fetch_tracks(
+        self, uris: Iterable[str]
+    ) -> dict[str, tuple[Track, AudioFilesExtensionResponse]]:
         self._validate_track_uris(uris)
 
         payload = self._build_tracks_request(uris)
@@ -45,27 +50,42 @@ class ExtendedMetadataClient:
         request = BatchedEntityRequest()
         request.header.task_id = uuid.uuid4().bytes
 
-        query = ExtensionQuery(extension_kind=ExtensionKind.TRACK_V4)
+        track_query = ExtensionQuery(extension_kind=ExtensionKind.TRACK_V4)
+        audio_query = ExtensionQuery(extension_kind=ExtensionKind.AUDIO_FILES)
 
         for uri in uris:
-            request.entity_request.append(EntityRequest(entity_uri=uri, query=[query]))
+            request.entity_request.append(
+                EntityRequest(entity_uri=uri, query=[track_query, audio_query])
+            )
 
         return request.SerializeToString()
 
     @staticmethod
-    def _parse_tracks_response(blob: bytes) -> dict[str, Track]:
+    def _parse_tracks_response(
+        blob: bytes,
+    ) -> dict[str, tuple[Track, AudioFilesExtensionResponse]]:
         response = BatchedExtensionResponse()
         response.ParseFromString(blob)
 
         tracks: dict[str, Track] = {}
+        audio_files: dict[str, AudioFilesExtensionResponse] = {}
 
         for group in response.extended_metadata:
-            if group.extension_kind != ExtensionKind.TRACK_V4:
-                continue
+            if group.extension_kind == ExtensionKind.TRACK_V4:
+                for entity in group.extension_data:
+                    track = Track()
+                    track.ParseFromString(entity.extension_data.value)
+                    tracks[entity.entity_uri] = track
 
-            for entity in group.extension_data:
-                track = Track()
-                track.ParseFromString(entity.extension_data.value)
-                tracks[entity.entity_uri] = track
+            elif group.extension_kind == ExtensionKind.AUDIO_FILES:
+                for entity in group.extension_data:
+                    audio = AudioFilesExtensionResponse()
+                    audio.ParseFromString(entity.extension_data.value)
+                    audio_files[entity.entity_uri] = audio
 
-        return tracks
+        results: dict[str, tuple[Track, AudioFilesExtensionResponse]] = {}
+
+        for uri in tracks.keys() & audio_files.keys():
+            results[uri] = (tracks[uri], audio_files[uri])
+
+        return results

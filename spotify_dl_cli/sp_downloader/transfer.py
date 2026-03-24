@@ -1,4 +1,3 @@
-from spotify_dl_cli.ogg_parser import reconstruct_ogg_from_chunks
 from typing import Iterator
 from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.sp_downloader.constants import CHUNK_SIZE
@@ -7,9 +6,7 @@ from Crypto.Cipher import AES
 from Crypto.Util import Counter
 
 
-def download_decrypt_and_reconstruct(
-    http: HttpClient, url: str, aes_key: bytes
-) -> Iterator[bytes]:
+def download_decrypt(http: HttpClient, url: str, aes_key: bytes) -> Iterator[bytes]:
     cipher = AES.new(
         key=aes_key,
         mode=AES.MODE_CTR,
@@ -19,6 +16,5 @@ def download_decrypt_and_reconstruct(
     with http.stream(url, headers={"Range": "bytes=0-"}) as resp:
         resp.raise_for_status()
 
-        yield from reconstruct_ogg_from_chunks(
-            cipher.decrypt(chunk) for chunk in resp.iter_content(chunk_size=CHUNK_SIZE)
-        )
+        for chunk in resp.iter_content(chunk_size=CHUNK_SIZE):
+            yield cipher.decrypt(chunk)
