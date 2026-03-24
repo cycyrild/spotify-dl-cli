@@ -20,7 +20,7 @@ from spotify_dl_cli.playplay_emulator5.emu.heap_allocator import HeapAllocator
 from spotify_dl_cli.playplay_emulator5.emu.hooks.hook_malloc import hook_malloc
 from spotify_dl_cli.playplay_emulator5.emu.hooks.stub_patches import stub_patches
 from spotify_dl_cli.playplay_emulator5.seh import seh_hook
-from spotify_dl_cli.playplay_emulator5.emu_session import _EmuSession
+from spotify_dl_cli.playplay_emulator5.emu_session import EmuSession
 from spotify_dl_cli.playplay_emulator5.seh.state_builder import build_state
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class KeyEmu:
         self._playplay_token: bytearray | None = None
         self._vm_obj_blob: bytearray | None = None
 
-    def _create_session(self) -> _EmuSession:
+    def _create_session(self) -> EmuSession:
         mu = Uc(UC_ARCH_X86, UC_MODE_64)
 
         if not isinstance(self._mapped_image, bytes):
@@ -68,7 +68,7 @@ class KeyEmu:
 
         vm_obj = heap.alloc(EMULATOR_SIZES.VM_OBJECT)
 
-        session = _EmuSession(
+        session = EmuSession(
             mu=mu,
             image_base=self._image_base,
             image_size=self._image_size,
@@ -101,7 +101,7 @@ class KeyEmu:
 
         return session
 
-    def _init_runtime(self, session: _EmuSession) -> None:
+    def _init_runtime(self, session: EmuSession) -> None:
         rt_context = session.heap.alloc(0x10)
         data = bytearray(rt_context.size)
 
@@ -111,9 +111,7 @@ class KeyEmu:
         rt_context.write(bytes(data))
 
         runtime.emulate_call(
-            session.mu,
-            session.vm_runtime_init,
-            [session.vm_obj.ptr(), rt_context.ptr(), 1],
+            session.mu, session.vm_runtime_init, [session.vm_obj.ptr, rt_context.ptr, 1]
         )
 
     def _read_playplay_token(self) -> bytearray:
@@ -128,7 +126,7 @@ class KeyEmu:
         return self._playplay_token
 
     @staticmethod
-    def _hook(mu: Uc, address: int, size: int, session: _EmuSession) -> None:
+    def _hook(mu: Uc, address: int, size: int, session: EmuSession) -> None:
         rax = mu.reg_read(UC_X86_REG_RAX)
         rbx = mu.reg_read(UC_X86_REG_RBX)
 
@@ -147,10 +145,10 @@ class KeyEmu:
             session.mu,
             session.vm_object_transform,
             [
-                session.vm_obj.ptr(),
-                session.obfuscated_key.ptr(),
-                session.derived_key.ptr(),
-                session.content_id.ptr(),
+                session.vm_obj.ptr,
+                session.obfuscated_key.ptr,
+                session.derived_key.ptr,
+                session.content_id.ptr,
             ],
         )
 

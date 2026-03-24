@@ -37,7 +37,7 @@ def is_bos(header_type: int) -> bool:
     return (header_type & BOS_FLAG) != 0
 
 
-@dataclass(frozen=True)
+@dataclass(slots=True, frozen=True)
 class ParsedPage:
     start: int
     total_len: int

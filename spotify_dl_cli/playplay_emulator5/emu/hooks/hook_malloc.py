@@ -16,11 +16,9 @@ def hook_malloc(mu: Uc, image_base: int, heap: HeapAllocator):
 
         chunk = heap.alloc(size)
 
-        logger.debug(
-            "size=0x%X -> 0x%X (chunk size=0x%X)", size, chunk.addr, chunk.size
-        )
+        logger.debug("size=0x%X -> 0x%X (chunk size=0x%X)", size, chunk.ptr, chunk.size)
 
-        return chunk.addr
+        return chunk.ptr
 
     hook_amd64(mu, addr, _cb)
 
