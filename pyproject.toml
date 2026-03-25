@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "spotify-dl-cli"
 version = "0.1.1"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dynamic = ["dependencies"]
 
 [project.scripts]
@@ -15,20 +15,11 @@ spotify-dl-cli = "spotify_dl_cli.main:main"
 where = ["."]
 include = ["spotify_dl_cli", "spotify_dl_cli.*"]
 
-[tool.setuptools.package-data]
-"spotify_dl_cli.playplay_emulator5" = [
-    "sp_client.dll",
-    "generated/*"
-]
-
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
-[project.optional-dependencies]
-dev = ["ruff"]
-
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py311"
 
 exclude = [
@@ -37,5 +28,5 @@ exclude = [
     "**/generated/**"
 ]
 
-[tool.ruff.format]
-skip-magic-trailing-comma = true
+[tool.ruff.lint]
+select = ["E", "F", "I"]

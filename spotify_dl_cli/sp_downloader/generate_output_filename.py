@@ -1,5 +1,6 @@
 import re
 from typing import Any
+
 from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import Track
 
 _INVALID_FILENAME_CHARS_RE = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
@@ -33,8 +34,7 @@ def _resolve_attr(obj: Any, path: str) -> Any:
             current = getattr(current, attr)
         except AttributeError as e:
             raise ValueError(
-                f"Invalid template path '{path}': object of type "
-                f"'{type(current).__name__}' has no attribute '{attr}'"
+                f"Invalid template path '{path}': object of type '{type(current).__name__}' has no attribute '{attr}'"
             ) from e
 
         if index is not None:
@@ -43,8 +43,7 @@ def _resolve_attr(obj: Any, path: str) -> Any:
                 current = current[idx]
             except (IndexError, TypeError) as e:
                 raise ValueError(
-                    f"Invalid template path '{path}': index {idx} is invalid "
-                    f"for attribute '{attr}'"
+                    f"Invalid template path '{path}': index {idx} is invalid for attribute '{attr}'"
                 ) from e
 
     return current

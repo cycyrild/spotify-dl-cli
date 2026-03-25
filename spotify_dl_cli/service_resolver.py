@@ -1,6 +1,8 @@
-import requests
 from typing import NamedTuple
 from urllib.parse import urlparse
+
+import requests
+
 from spotify_dl_cli.http_client.consts import BASE_HEADERS
 
 
@@ -23,9 +25,7 @@ def parse_endpoint(raw: str, *, scheme: str = DEFAULT_SCHEME) -> str:
 
 
 def resolve_spotify_endpoints() -> SpotifyEndpoints:
-    r = requests.get(
-        APRESOLVE_URL, headers=BASE_HEADERS, params={"type": ("dealer", "spclient")}
-    )
+    r = requests.get(APRESOLVE_URL, headers=BASE_HEADERS, params={"type": ("dealer", "spclient")})
     r.raise_for_status()
     data = r.json()
 

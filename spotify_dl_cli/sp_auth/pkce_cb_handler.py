@@ -18,9 +18,7 @@ def make_callback_handler(queue: Queue[str]) -> type[BaseHTTPRequestHandler]:
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html")
                 self.end_headers()
-                self.wfile.write(
-                    b"Authorization successful. You may close this window."
-                )
+                self.wfile.write(b"Authorization successful. You may close this window.")
             else:
                 self.send_response(400)
                 self.end_headers()

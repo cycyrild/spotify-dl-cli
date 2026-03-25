@@ -1,7 +1,13 @@
 import uuid
 from collections.abc import Iterable
 from urllib.parse import urljoin
+
+from spotify_dl_cli.clt_extended_metadata.audio_files_extension_pb2 import (
+    AudioFilesExtensionResponse,
+)
+from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
+
 from .extendedmetadata_pb2 import (
     BatchedEntityRequest,
     BatchedExtensionResponse,
@@ -9,10 +15,6 @@ from .extendedmetadata_pb2 import (
     ExtensionKind,
     ExtensionQuery,
     Track,
-)
-from spotify_dl_cli.http_client.http_client import HttpClient
-from spotify_dl_cli.clt_extended_metadata.audio_files_extension_pb2 import (
-    AudioFilesExtensionResponse,
 )
 
 
@@ -23,9 +25,7 @@ class ExtendedMetadataClient:
         self._http = http
         self._base_url = sp_client_base
 
-    def fetch_tracks(
-        self, uris: Iterable[str]
-    ) -> dict[str, tuple[Track, AudioFilesExtensionResponse]]:
+    def fetch_tracks(self, uris: Iterable[str]) -> dict[str, tuple[Track, AudioFilesExtensionResponse]]:
         self._validate_track_uris(uris)
 
         payload = self._build_tracks_request(uris)
@@ -54,9 +54,7 @@ class ExtendedMetadataClient:
         audio_query = ExtensionQuery(extension_kind=ExtensionKind.AUDIO_FILES)
 
         for uri in uris:
-            request.entity_request.append(
-                EntityRequest(entity_uri=uri, query=[track_query, audio_query])
-            )
+            request.entity_request.append(EntityRequest(entity_uri=uri, query=[track_query, audio_query]))
 
         return request.SerializeToString()
 

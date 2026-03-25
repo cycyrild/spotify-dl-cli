@@ -1,12 +1,14 @@
 from typing import Iterator
-from spotify_dl_cli.http_client.http_client import HttpClient
-from spotify_dl_cli.sp_downloader.constants import CHUNK_SIZE
-from spotify_dl_cli.playplay_emulator5.consts import AUDIO_AES
+
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
+from unplayplay import AUDIO_AES
+
+from spotify_dl_cli.http_client.http_client import HttpClient
+from spotify_dl_cli.sp_downloader.constants import CHUNK_SIZE
 
 
-def download_decrypt(http: HttpClient, url: str, aes_key: bytes) -> Iterator[bytes]:
+def download_decrypt(http: HttpClient, url: str, aes_key: bytearray) -> Iterator[bytes]:
     cipher = AES.new(
         key=aes_key,
         mode=AES.MODE_CTR,

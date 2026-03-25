@@ -1,9 +1,10 @@
-from dataclasses import dataclass
 import struct
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 
 """
-Incremental Ogg parser in pure Python allowing the reconstruction and structural validation of an Ogg stream from fragmented data.
+Incremental Ogg parser in pure Python allowing the reconstruction and structural validation of an Ogg stream
+from fragmented data.
 """
 
 CAPTURE_PATTERN = b"OggS"
@@ -154,8 +155,7 @@ def reconstruct_ogg_from_chunks(chunks: Iterable[bytes]) -> Iterator[bytes]:
 
             if data[:4] != CAPTURE_PATTERN:
                 raise RuntimeError(
-                    "Unrecognized codec: first chunk does not start with OggS "
-                    f"(first16={data[:16].hex(' ')})"
+                    f"Unrecognized codec: first chunk does not start with OggS (first16={data[:16].hex(' ')})"
                 )
 
             data, _skipped = skip_spotify_custom_page_if_present(data)
@@ -166,20 +166,14 @@ def reconstruct_ogg_from_chunks(chunks: Iterable[bytes]) -> Iterator[bytes]:
             if expected_serial is None:
                 expected_serial = serial
             elif serial != expected_serial:
-                raise RuntimeError(
-                    f"Multiple logical streams detected: serial={serial}, expected={expected_serial}."
-                )
+                raise RuntimeError(f"Multiple logical streams detected: serial={serial}, expected={expected_serial}.")
 
             if last_page_no is None:
                 if not bos:
-                    raise RuntimeError(
-                        f"Invalid stream: first page is not BOS (pageno={pageno})."
-                    )
+                    raise RuntimeError(f"Invalid stream: first page is not BOS (pageno={pageno}).")
             else:
                 if pageno != last_page_no + 1:
-                    raise RuntimeError(
-                        f"Page discontinuity: pageno={pageno}, expected={last_page_no + 1}."
-                    )
+                    raise RuntimeError(f"Page discontinuity: pageno={pageno}, expected={last_page_no + 1}.")
 
             last_page_no = pageno
             yield page_bytes

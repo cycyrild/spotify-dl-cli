@@ -1,28 +1,29 @@
 import logging
-from humanize import precisedelta
 from datetime import timedelta
 from pathlib import Path
-from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
-from spotify_dl_cli.playplay_emulator5.key_emu import KeyEmu
-from spotify_dl_cli.resolve_exe_path import bundled_dll_path
-from spotify_dl_cli.config import default_tokens_path
-from spotify_dl_cli.sp_auth.constants import CLIENT_ID
-from spotify_dl_cli.sp_downloader.downloader import download_track
-from spotify_dl_cli.collect_track_uris import resolve_track_uris
-from spotify_dl_cli.parse_args import parse_args
-from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
-from spotify_dl_cli.http_client.http_client import HttpClient
+
+from humanize import precisedelta
+from unplayplay import PLAYPLAY_TOKEN, KeyEmu
+
+from spotify_dl_cli.audio_formats import cli_to_format
 from spotify_dl_cli.clt_extended_metadata.extended_metadata_client import (
     ExtendedMetadataClient,
 )
+from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
+from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
 from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
     StorageResolverClient,
 )
+from spotify_dl_cli.collect_track_uris import resolve_track_uris
+from spotify_dl_cli.config import default_tokens_path
+from spotify_dl_cli.http_client.http_client import HttpClient
+from spotify_dl_cli.parse_args import parse_args
+from spotify_dl_cli.resolve_exe_path import bundled_dll_path
 from spotify_dl_cli.service_resolver import resolve_spotify_endpoints
+from spotify_dl_cli.sp_auth.constants import CLIENT_ID
 from spotify_dl_cli.sp_auth.pkce import SpotifyAuthPKCE
+from spotify_dl_cli.sp_downloader.downloader import download_track
 from spotify_dl_cli.token_manager import SpotifyTokenManager
-from spotify_dl_cli.audio_formats import cli_to_format
-from spotify_dl_cli.playplay_emulator5.consts import PLAYPLAY_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     args = parse_args()
 
-    logging.basicConfig(
-        level=getattr(logging, args.log_level), format="%(levelname)s: %(message)s"
-    )
+    logging.basicConfig(level=getattr(logging, args.log_level), format="%(levelname)s: %(message)s")
 
     base_dir = Path(args.output_dir)
 
@@ -43,12 +42,7 @@ def main() -> None:
     # OAuth 2.0 + PKCE
     auth_pkce = SpotifyAuthPKCE(
         client_id=CLIENT_ID,
-        scopes=(
-            "playlist-read-private "
-            "playlist-modify-private "
-            "playlist-modify-public "
-            "user-read-email"
-        ),
+        scopes=("playlist-read-private playlist-modify-private playlist-modify-public user-read-email"),
         server_port=5588,
     )
 

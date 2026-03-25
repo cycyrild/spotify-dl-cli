@@ -1,8 +1,10 @@
 import json
 import logging
 import time
-import requests
 from pathlib import Path
+
+import requests
+
 from spotify_dl_cli.http_client.consts import BASE_HEADERS
 from spotify_dl_cli.sp_auth.pkce import SpotifyAuthPKCE
 from spotify_dl_cli.sp_auth.refresh_token_payload import RefreshTokenPayload
@@ -14,9 +16,7 @@ logger = logging.getLogger(__name__)
 class SpotifyTokenManager:
     _TOKEN_URL = "https://accounts.spotify.com/api/token"
 
-    def __init__(
-        self, client_id: str, token_file: Path, auth_provider: SpotifyAuthPKCE
-    ):
+    def __init__(self, client_id: str, token_file: Path, auth_provider: SpotifyAuthPKCE):
         self._client_id = client_id
         self._token_file = token_file
         self._auth_provider = auth_provider
@@ -58,10 +58,7 @@ class SpotifyTokenManager:
 
         if response.status_code == 400:
             body = response.json()
-            raise RuntimeError(
-                f"Spotify token refresh failed ({body.get('error')}): "
-                f"{body.get('error_description')}"
-            )
+            raise RuntimeError(f"Spotify token refresh failed ({body.get('error')}): {body.get('error_description')}")
 
         response.raise_for_status()
 
@@ -71,9 +68,7 @@ class SpotifyTokenManager:
             raise RuntimeError("Spotify token refresh response missing refresh_token")
 
         self._set_expiry(tokens)
-        logger.info(
-            "Refreshed access token, expires in %d seconds", tokens["expires_in"]
-        )
+        logger.info("Refreshed access token, expires in %d seconds", tokens["expires_in"])
         self._save_tokens(tokens)
 
         return tokens
@@ -91,9 +86,7 @@ class SpotifyTokenManager:
 
         tokens: SpotifyTokens = response.json()
         self._set_expiry(tokens)
-        logger.info(
-            "Obtained new access token, expires in %d seconds", tokens["expires_in"]
-        )
+        logger.info("Obtained new access token, expires in %d seconds", tokens["expires_in"])
         self._save_tokens(tokens)
         return tokens
 

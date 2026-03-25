@@ -1,6 +1,7 @@
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
-from spotify_dl_cli.http_client.http_client import HttpClient
+
 from spotify_dl_cli.clt_playlist.playlist4_external_pb2 import SelectedListContent
+from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
 
 
@@ -48,9 +49,7 @@ class PlaylistClient:
 
         return uris
 
-    def _get_next_page(
-        self, current_url: str, content: SelectedListContent
-    ) -> str | None:
+    def _get_next_page(self, current_url: str, content: SelectedListContent) -> str | None:
 
         if not content.HasField("contents"):
             return None

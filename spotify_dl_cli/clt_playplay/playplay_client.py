@@ -1,21 +1,24 @@
 import logging
 import time
+from urllib.parse import urljoin
+
 import requests
 from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    retry_if_exception,
     before_sleep_log,
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
 )
+
 from spotify_dl_cli.http_client.http_client import HttpClient
+
 from .playplay_pb2 import (
     ContentType,
     Interactivity,
     PlayPlayLicenseRequest,
     PlayPlayLicenseResponse,
 )
-from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +26,7 @@ logger = logging.getLogger(__name__)
 class PlayplayClient:
     _ENDPOINT_PATH = "/playplay/v1/key"
 
-    def __init__(
-        self, sp_client_base: str, playplay_token: bytes, http: HttpClient
-    ) -> None:
+    def __init__(self, sp_client_base: str, playplay_token: bytes, http: HttpClient) -> None:
         self._base_url = sp_client_base
         self._token = playplay_token
         self._http = http

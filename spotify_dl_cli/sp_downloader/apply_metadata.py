@@ -1,8 +1,9 @@
 import base64
 from pathlib import Path
+
+from mutagen.flac import FLAC, Picture
 from mutagen.oggvorbis import OggVorbis
-from mutagen.flac import FLAC
-from mutagen.flac import Picture
+
 from spotify_dl_cli.audio_formats import FLAC_FORMATS, VORBIS_FORMATS
 from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile, Track
 from spotify_dl_cli.http_client.http_client import HttpClient
@@ -79,9 +80,7 @@ def _build_tags(track: Track) -> dict[str, list[str]]:
         _set_tag(tags, "VERSION", track.version_title)
 
     if track.artist:
-        _set_tag(
-            tags, "ARTIST", [artist.name for artist in track.artist if artist.name]
-        )
+        _set_tag(tags, "ARTIST", [artist.name for artist in track.artist if artist.name])
 
     for ext in track.external_id:
         ext_type = ext.type.lower()
@@ -134,9 +133,7 @@ def _build_tags(track: Track) -> dict[str, list[str]]:
     return tags
 
 
-def apply_metadata(
-    output_path: Path, format: AudioFile.Format, track: Track, http_client: HttpClient
-) -> None:
+def apply_metadata(output_path: Path, format: AudioFile.Format, track: Track, http_client: HttpClient) -> None:
     audio: OggVorbis | FLAC
 
     if format in VORBIS_FORMATS:

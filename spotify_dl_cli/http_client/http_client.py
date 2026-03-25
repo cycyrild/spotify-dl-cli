@@ -1,5 +1,7 @@
 from typing import Any
+
 import requests
+
 from spotify_dl_cli.http_client.consts import BASE_HEADERS
 
 
@@ -15,9 +17,7 @@ class HttpClient:
 
         self._session.headers.update(headers)
 
-    def get_protobuf(
-        self, url: str, *, headers: dict[str, str] | None = None, **kwargs: Any
-    ) -> bytes:
+    def get_protobuf(self, url: str, *, headers: dict[str, str] | None = None, **kwargs: Any) -> bytes:
         req_headers = {"accept": "application/x-protobuf"}
 
         if headers:
