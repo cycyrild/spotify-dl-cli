@@ -1,5 +1,6 @@
 import argparse
 import sys
+
 from .audio_formats import CLI_FORMATS
 
 LOG_LEVEL_CHOICES = ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG")
@@ -12,9 +13,8 @@ def parse_args() -> argparse.Namespace:
     if used:
         flags = ", ".join(sorted(used))
         raise SystemExit(
-            f"{flags} is no longer supported.\n"
-            "Use URIs as positional arguments:\n"
-            "  spotify-dl-cli spotify:track:... spotify:playlist:..."
+            f"{flags} is no longer supported.\nUse URIs as positional arguments:\n"
+            "spotify-dl-cli spotify:track:... spotify:playlist:..."
         )
 
     parser = argparse.ArgumentParser()
@@ -25,9 +25,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--output-dir", default="music")
 
-    parser.add_argument(
-        "--log-level", default="INFO", choices=LOG_LEVEL_CHOICES, help="Log level"
-    )
+    parser.add_argument("--log-level", default="INFO", choices=LOG_LEVEL_CHOICES, help="Log level")
 
     parser.add_argument(
         "--filename-template",

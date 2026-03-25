@@ -5,9 +5,7 @@ def parse_spotify_uri(uri: str, expected_type: str | None = None) -> tuple[str, 
     parts = uri.split(":")
 
     if len(parts) != 3:
-        raise ValueError(
-            f"Malformed Spotify URI (expected format spotify:type:id): {uri}"
-        )
+        raise ValueError(f"Malformed Spotify URI (expected format spotify:type:id): {uri}")
 
     scheme, resource_type, resource_id = parts
 
@@ -21,8 +19,6 @@ def parse_spotify_uri(uri: str, expected_type: str | None = None) -> tuple[str, 
         raise ValueError("Spotify URI resource id is empty")
 
     if expected_type and resource_type != expected_type:
-        raise ValueError(
-            f"Invalid resource type '{resource_type}', expected '{expected_type}'"
-        )
+        raise ValueError(f"Invalid resource type '{resource_type}', expected '{expected_type}'")
 
     return resource_type, resource_id

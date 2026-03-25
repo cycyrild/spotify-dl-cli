@@ -1,9 +1,10 @@
-from spotify_dl_cli.http_client.http_client import HttpClient
+from urllib.parse import urljoin
+
+from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile
 from spotify_dl_cli.clt_storage_resolve.storage_resolve_pb2 import (
     StorageResolveResponse,
 )
-from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile
-from urllib.parse import urljoin
+from spotify_dl_cli.http_client.http_client import HttpClient
 
 
 class StorageResolverClient:
@@ -19,9 +20,7 @@ class StorageResolverClient:
         return self._parse_response(response)
 
     def _build_url(self, file_id: bytes, format: AudioFile.Format) -> str:
-        return urljoin(
-            self._base_url, f"{self._ENDPOINT_PATH}/{format}/{file_id.hex()}"
-        )
+        return urljoin(self._base_url, f"{self._ENDPOINT_PATH}/{format}/{file_id.hex()}")
 
     @staticmethod
     def _parse_response(blob: bytes) -> list[str]:

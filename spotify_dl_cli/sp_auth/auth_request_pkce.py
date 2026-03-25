@@ -1,4 +1,4 @@
-from typing import TypedDict, Literal, NotRequired
+from typing import Literal, NotRequired, TypedDict
 
 
 class AuthorizationRequestPKCE(TypedDict):

@@ -1,12 +1,9 @@
-pefile
-unicorn
 requests
 protobuf
-capstone
 tqdm
 humanize
 mutagen
 platformdirs
-pydantic
 pycryptodome
 tenacity
+unplayplay @ git+https://github.com/cycyrild/another_unplaplay.git

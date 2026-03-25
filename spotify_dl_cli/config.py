@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from platformdirs import user_config_dir
 
 DEFAULT_TOKENS_FILE_NAME = "spotify_tokens.json"

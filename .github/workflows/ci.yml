@@ -1,32 +1,35 @@
 name: CI
 
 on:
-  pull_request:
+ pull_request:
     branches: ["main"]
   workflow_dispatch:
 
 jobs:
   ci:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
           cache: "pip"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Ruff format check
-        run: |
-          ruff format --check spotify_dl_cli
+      - name: Ruff format
+        run: ruff format --check
 
-      - name: Compile check
-        run: |
-          python -m compileall spotify_dl_cli
+      - name: Ruff lint
+        run: ruff check
+
+      - name: Pyright
+        run: pyright spotify_dl_cli
+
+      - name: Compile
+        run: python -m compileall spotify_dl_cli

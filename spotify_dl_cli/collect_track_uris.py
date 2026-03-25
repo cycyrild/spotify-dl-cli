@@ -1,15 +1,13 @@
-from collections.abc import Iterable
 import logging
+from collections.abc import Iterable
+
 from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
 from spotify_dl_cli.spotify_uri_helpers import parse_spotify_uri
-
 
 logger = logging.getLogger(__name__)
 
 
-def resolve_track_uris(
-    uris: Iterable[str], playlist_client: PlaylistClient
-) -> set[str]:
+def resolve_track_uris(uris: Iterable[str], playlist_client: PlaylistClient) -> set[str]:
     all_track_uris: set[str] = set()
 
     for uri in uris:

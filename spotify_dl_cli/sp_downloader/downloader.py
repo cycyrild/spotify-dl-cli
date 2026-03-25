@@ -1,27 +1,31 @@
 import logging
 from pathlib import Path
+
 from humanize import naturalsize
-from spotify_dl_cli.audio_formats import format_to_cli, format_to_extension
-from spotify_dl_cli.http_client.http_client import HttpClient
-from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
-from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile, Track
-from spotify_dl_cli.playplay_emulator5.key_emu import KeyEmu
-from spotify_dl_cli.sp_downloader.generate_output_filename import (
-    generate_output_filename,
-)
-from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
-    StorageResolverClient,
-)
 from tqdm import tqdm
-from spotify_dl_cli.sp_downloader.transfer import download_decrypt
-from spotify_dl_cli.playplay_emulator5.consts import EMULATOR_SIZES
+from unplayplay import EMULATOR_SIZES, KeyEmu
+
+from spotify_dl_cli.audio_formats import (
+    VORBIS_FORMATS,
+    format_to_cli,
+    format_to_extension,
+)
 from spotify_dl_cli.clt_extended_metadata.audio_files_extension_pb2 import (
     AudioFilesExtensionResponse,
     ExtendedAudioFile,
 )
-from spotify_dl_cli.audio_formats import VORBIS_FORMATS
+from spotify_dl_cli.clt_extended_metadata.extendedmetadata_pb2 import AudioFile, Track
+from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
+from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
+    StorageResolverClient,
+)
+from spotify_dl_cli.http_client.http_client import HttpClient
 from spotify_dl_cli.ogg_parser import reconstruct_ogg_from_chunks
 from spotify_dl_cli.sp_downloader.apply_metadata import apply_metadata
+from spotify_dl_cli.sp_downloader.generate_output_filename import (
+    generate_output_filename,
+)
+from spotify_dl_cli.sp_downloader.transfer import download_decrypt
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +35,7 @@ def _download_from_url(
     url: str,
     file_format: AudioFile.Format,
     output_path: Path,
-    aes_key: bytes,
+    aes_key: bytearray,
 ) -> None:
     head = http_client.head(url)
     total_size = int(head.headers["Content-Length"])
@@ -41,9 +45,7 @@ def _download_from_url(
 
     with (
         output_path.open("wb") as f,
-        tqdm(
-            total=total_size, unit="B", unit_scale=True, unit_divisor=1024, leave=False
-        ) as pbar,
+        tqdm(total=total_size, unit="B", unit_scale=True, unit_divisor=1024, leave=False) as pbar,
     ):
         chunks = download_decrypt(http_client, url, aes_key)
 
@@ -60,7 +62,7 @@ def _download_with_fallback(
     urls: list[str],
     file_format: AudioFile.Format,
     output_path: Path,
-    aes_key: bytes,
+    aes_key: bytearray,
 ) -> None:
     last_error = None
 
@@ -98,11 +100,7 @@ def download_track(
 ) -> None:
     logger.debug(
         "Available formats: %s",
-        [
-            fmt
-            for f in audio_files.files
-            if (fmt := format_to_cli(f.file.format)) is not None
-        ],
+        [fmt for f in audio_files.files if (fmt := format_to_cli(f.file.format)) is not None],
     )
 
     extended_file: ExtendedAudioFile | None = next(

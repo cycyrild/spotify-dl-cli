@@ -5,6 +5,7 @@ import threading
 import urllib.parse
 from http.server import HTTPServer
 from queue import Queue
+
 from spotify_dl_cli.sp_auth.auth_request_pkce import AuthorizationRequestPKCE
 from spotify_dl_cli.sp_auth.authorization_code_payload import AuthorizationCodePayload
 from spotify_dl_cli.sp_auth.pkce_cb_handler import make_callback_handler
@@ -50,18 +51,14 @@ class SpotifyAuthPKCE:
         handler_cls = make_callback_handler(self._auth_code_queue)
 
         threading.Thread(
-            target=lambda: HTTPServer(
-                (self._SERVER_HOST, self._server_port), handler_cls
-            ).handle_request(),
+            target=lambda: HTTPServer((self._SERVER_HOST, self._server_port), handler_cls).handle_request(),
             daemon=True,
         ).start()
 
     def wait_for_authorization_code(self, timeout: float | None = None) -> str:
         return self._auth_code_queue.get(timeout=timeout)
 
-    def get_token_exchange_payload(
-        self, authorization_code: str
-    ) -> AuthorizationCodePayload:
+    def get_token_exchange_payload(self, authorization_code: str) -> AuthorizationCodePayload:
         return AuthorizationCodePayload(
             grant_type="authorization_code",
             code=authorization_code,
