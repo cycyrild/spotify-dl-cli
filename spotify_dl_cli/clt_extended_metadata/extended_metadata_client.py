@@ -25,6 +25,10 @@ class ExtendedMetadataClient:
         self._http = http
         self._base_url = sp_client_base
 
+    def fetch_track(self, uri: str) -> tuple[Track, AudioFilesExtensionResponse]:
+        parse_spotify_uri(uri, expected_type="track")
+        return self.fetch_tracks([uri])[uri]
+
     def fetch_tracks(self, uris: Iterable[str]) -> dict[str, tuple[Track, AudioFilesExtensionResponse]]:
         self._validate_track_uris(uris)
 

@@ -121,7 +121,7 @@ def download_track(
         obfuscated_key=obfuscated_key,
     )
     logger.info("Download Quality: %s", format_to_cli(file.format))
-    logger.info("File ID: %s, AES key: %s", file.file_id.hex(), aes_key.hex())
+    logger.info("File ID: %s,  Obf key: %s, AES key: %s", file.file_id.hex(), obfuscated_key.hex(), aes_key.hex())
 
     urls = resolver.resolve(file.file_id, file.format)
 

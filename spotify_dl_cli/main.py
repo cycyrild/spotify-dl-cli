@@ -9,6 +9,7 @@ from spotify_dl_cli.audio_formats import cli_to_format
 from spotify_dl_cli.clt_extended_metadata.extended_metadata_client import (
     ExtendedMetadataClient,
 )
+from spotify_dl_cli.clt_extended_metadata.helpers import track_gid_to_uri
 from spotify_dl_cli.clt_playlist.playlist_client import PlaylistClient
 from spotify_dl_cli.clt_playplay.playplay_client import PlayplayClient
 from spotify_dl_cli.clt_storage_resolve.storage_resolve_client import (
@@ -88,6 +89,11 @@ def main() -> None:
         logger.info("Artist   : %s", ", ".join(a.name for a in track.artist))
         logger.info("Album    : %s", track.album.name)
         logger.info("Duration : %s", duration_str)
+
+        if not track.file and track.alternative:
+            # Looks like a hack, but works for now ...
+            logger.info("Track has no file, using alternative with GID: %s", track.alternative[0].gid)
+            track, audio_files = metadata.fetch_track(track_gid_to_uri(track.alternative[0].gid))
 
         download_track(
             client,
